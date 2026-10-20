@@ -43,7 +43,10 @@ from torch.testing._internal.common_cuda import (
     TEST_CUDA,
     xfailIfSM120OrLater,
 )
-from torch.testing._internal.common_device_type import instantiate_device_type_tests
+from torch.testing._internal.common_device_type import (
+    DeviceTypeTestBase,
+    instantiate_device_type_tests,
+)
 from torch.testing._internal.common_quantized import (
     _bfloat16_to_float4_e2m1fn_x2,
     data_to_nvfp4_scale,
@@ -1727,6 +1730,63 @@ class FlexGemmTestCase(TestCase):
         else:
             file_check = file_check.check(self.localReduceGeometryPattern(group, 0))
         file_check.check("feeds_main=True").check("combine=").run(code)
+
+
+@instantiate_parametrized_tests
+class TestFlexGemmDependencyGuard(TestCase):
+    @parametrize("sm100_or_later", [False, True])
+    @parametrize("has_quack", [False, True])
+    @parametrize("skip_class", [False, True])
+    def test_device_test_collection(self, sm100_or_later, has_quack, skip_class):
+        # Model a device whose primary device is initialized during collection.
+        class LazyDeviceTestBase(DeviceTypeTestBase):
+            device_type = "cpu"
+
+            @classmethod
+            def get_primary_device(cls):
+                return cls.primary_device
+
+            @classmethod
+            def setUpClass(cls):
+                super().setUpClass()
+                cls.primary_device = "cpu"
+
+        executed = []
+
+        @unittest.skipIf(skip_class, "class decorator")
+        class Probe(FlexGemmTestCase):
+            def test_body(self, device):
+                executed.append(device)
+
+        scope = {"Probe": Probe}
+        with (
+            mock.patch(__name__ + ".SM100OrLater", sm100_or_later),
+            mock.patch.object(lowering, "has_flex_gemm_quack", return_value=has_quack),
+            mock.patch(
+                "torch.testing._internal.common_device_type.get_desired_device_type_test_bases",
+                return_value=[LazyDeviceTestBase],
+            ),
+        ):
+            self.assertFalse(hasattr(LazyDeviceTestBase, "primary_device"))
+            try:
+                instantiate_device_type_tests(Probe, scope)
+            except unittest.SkipTest as exc:
+                self.fail(f"Device test collection raised SkipTest: {exc}")
+
+            suite = unittest.defaultTestLoader.loadTestsFromTestCase(scope["ProbeCPU"])
+            self.assertEqual(suite.countTestCases(), 1)
+            result = unittest.TestResult()
+            suite.run(result)
+
+        should_skip = skip_class or (sm100_or_later and not has_quack)
+        self.assertEqual(result.errors, [])
+        self.assertEqual(result.failures, [])
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.skipped), int(should_skip))
+        self.assertEqual(executed, [] if should_skip else ["cpu"])
+        if should_skip:
+            reason = "class decorator" if skip_class else "requires CuTeDSL"
+            self.assertEqual(result.skipped[0][1], reason)
 
 
 @instantiate_parametrized_tests
