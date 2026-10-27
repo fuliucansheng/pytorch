@@ -305,9 +305,9 @@ jobs:
         run: |
           "${PYTORCH_ROOT}/.ci/pytorch/binary_windows_build.sh"
       - uses: actions/upload-artifact@v4.4.0
-        if: always()
+        if: success()
         with:
-          name: ${{ matrix.build_name }}
+          name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) && format('{0}-unsigned', matrix.build_name) || matrix.build_name }}
           retention-days: 14
           if-no-files-found: error
           path: "${{ env.PYTORCH_FINAL_PACKAGE_DIR }}"
@@ -323,11 +323,82 @@ jobs:
         run: |
           .github\scripts\kill_active_ssh_sessions.ps1
 
+  wheel-sign:
+    name: ${{ matrix.build_name }}-sign
+    needs: wheel-build
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_binary-windows-sign.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_name: "wheel-py3_11-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_11-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_11-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_11-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_12-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_12-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_12-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_12-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_13-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_13-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_13-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_13-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_14-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_14-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_14-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_14-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_14t-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_14t-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_14t-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_14t-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_15-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_15-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_15-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_15-xpu"
+            backend: "xpu"
+          - build_name: "wheel-py3_15t-cpu"
+            backend: "cpu"
+          - build_name: "wheel-py3_15t-cuda13_2"
+            backend: "cuda"
+          - build_name: "wheel-py3_15t-cuda13_4"
+            backend: "cuda"
+          - build_name: "wheel-py3_15t-xpu"
+            backend: "xpu"
+    with:
+      enabled: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) }}
+      build_name: ${{ matrix.build_name }}
+      backend: ${{ matrix.backend }}
 
   wheel-test:
     name: ${{ matrix.build_name }}-test
-    if: ${{ github.repository_owner == 'pytorch' }}
-    needs: [get-label-type, wheel-build]
+    if: ${{ !cancelled() && github.repository_owner == 'pytorch' && needs.wheel-build.result == 'success' && (needs.wheel-sign.result == 'success' || needs.wheel-sign.result == 'skipped') }}
+    needs: [get-label-type, wheel-build, wheel-sign]
     runs-on: ${{ matrix.runs_on }}
     timeout-minutes: 360
     strategy:
@@ -510,6 +581,7 @@ jobs:
       GPU_ARCH_TYPE: ${{ matrix.gpu_arch_type }}
       SKIP_ALL_TESTS: 1
       DESIRED_PYTHON: ${{ matrix.desired_python }}
+      WINDOWS_WHEEL_REQUIRE_SIGNED: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) }}
     steps:
       - name: Display EC2 information
         shell: bash
@@ -577,7 +649,7 @@ jobs:
       - uses: actions/download-artifact@v4.1.7
         name: Download Build Artifacts
         with:
-          name: ${{ matrix.build_name }}
+          name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) && format('{0}-signed', matrix.build_name) || matrix.build_name }}
           path: "${{ env.PYTORCH_FINAL_PACKAGE_DIR }}"
       - name: Populate binary env
         shell: bash
@@ -601,7 +673,7 @@ jobs:
 
   wheel-upload:
     name: ${{ matrix.build_name }}-upload
-    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && github.repository_owner == 'pytorch' }}
+    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && needs.wheel-test.result == 'success' && github.repository_owner == 'pytorch' }}
     permissions:
       id-token: write
       contents: read
@@ -761,6 +833,9 @@ jobs:
       DOCKER_IMAGE_TAG_PREFIX: "cpu"
       DESIRED_PYTHON: ${{ matrix.desired_python }}
       build_name: ${{ matrix.build_name }}
+      artifact_name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) && format('{0}-signed', matrix.build_name) || matrix.build_name }}
+      verify_windows_wheel: true
+      require_windows_signed: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), matrix.build_name) }}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -769,7 +844,7 @@ jobs:
   libtorch-cpu-shared-with-deps-release-extract:
     if: ${{ github.repository_owner == 'pytorch' }}
     needs:
-      - wheel-build
+      - wheel-test
     runs-on: "mt-l-x86iavx512-16-128"
     container:
       image: python:3.11
@@ -789,7 +864,7 @@ jobs:
       - uses: actions/download-artifact@v4.1.7
         name: Download Wheel Artifact
         with:
-          name: wheel-py3_11-cpu
+          name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), 'wheel-py3_11-cpu') && format('{0}-signed', 'wheel-py3_11-cpu') || 'wheel-py3_11-cpu' }}
           path: "${{ runner.temp }}/wheel_artifact/"
       - name: Extract libtorch from wheel
         shell: bash
@@ -833,7 +908,7 @@ jobs:
   libtorch-cuda13_2-shared-with-deps-release-extract:
     if: ${{ github.repository_owner == 'pytorch' }}
     needs:
-      - wheel-build
+      - wheel-test
     runs-on: "mt-l-x86iavx512-16-128"
     container:
       image: python:3.11
@@ -853,7 +928,7 @@ jobs:
       - uses: actions/download-artifact@v4.1.7
         name: Download Wheel Artifact
         with:
-          name: wheel-py3_11-cuda13_2
+          name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), 'wheel-py3_11-cuda13_2') && format('{0}-signed', 'wheel-py3_11-cuda13_2') || 'wheel-py3_11-cuda13_2' }}
           path: "${{ runner.temp }}/wheel_artifact/"
       - name: Extract libtorch from wheel
         shell: bash
@@ -898,7 +973,7 @@ jobs:
   libtorch-cuda13_4-shared-with-deps-release-extract:
     if: ${{ github.repository_owner == 'pytorch' }}
     needs:
-      - wheel-build
+      - wheel-test
     runs-on: "mt-l-x86iavx512-16-128"
     container:
       image: python:3.11
@@ -918,7 +993,7 @@ jobs:
       - uses: actions/download-artifact@v4.1.7
         name: Download Wheel Artifact
         with:
-          name: wheel-py3_11-cuda13_4
+          name: ${{ github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), 'wheel-py3_11-cuda13_4') && format('{0}-signed', 'wheel-py3_11-cuda13_4') || 'wheel-py3_11-cuda13_4' }}
           path: "${{ runner.temp }}/wheel_artifact/"
       - name: Extract libtorch from wheel
         shell: bash

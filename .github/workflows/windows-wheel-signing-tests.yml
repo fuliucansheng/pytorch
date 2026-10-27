@@ -1,0 +1,33 @@
+# Owner(s): ["oncall: releng"]
+name: Windows wheel signing helper tests
+
+on:
+  pull_request:
+    paths:
+      - .ci/wheel/windows/**
+      - .ci/pytorch/binary_windows_test.sh
+      - .github/workflows/_binary-windows-sign.yml
+      - .github/workflows/_binary-upload.yml
+      - .github/templates/windows_binary_build_workflow.yml.j2
+      - .github/workflows/windows-wheel-signing-tests.yml
+  push:
+    branches: [main]
+    paths:
+      - .ci/wheel/windows/**
+      - .github/workflows/windows-wheel-signing-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Packaging, failure-path and read-only Windows adapter tests
+        run: python -B .ci/wheel/windows/test_sign_wheel.py -v

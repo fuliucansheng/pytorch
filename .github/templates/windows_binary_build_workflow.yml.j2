@@ -1,6 +1,14 @@
 {% import 'common.yml.j2' as common %}
 {% import 'upload.yml.j2' as upload %}
 
+{%- macro signing_requested(build_name) -%}
+github.repository == 'pytorch/pytorch' && github.event_name == 'push' && (github.ref == 'refs/heads/nightly' || startsWith(github.ref, 'refs/tags/v')) && contains(fromJSON(vars.WINDOWS_WHEEL_SIGNING_BUILD_NAMES || '[]'), !{{ build_name }})
+{%- endmacro %}
+
+{%- macro wheel_artifact(build_name, suffix='signed') -%}
+${{ !{{ signing_requested(build_name) }} && format('{0}-!{{ suffix }}', !{{ build_name }}) || !{{ build_name }} }}
+{%- endmacro %}
+
 {%- block name -%}
 # Template is at:    .github/templates/windows_binary_build_workflow.yml.j2
 # Generation script: .github/scripts/generate_ci_workflows.py
@@ -177,9 +185,13 @@ jobs:
         run: |
           "${PYTORCH_ROOT}/.ci/pytorch/binary_windows_build.sh"
       - uses: !{{ common.upload_artifact_action }}
-        if: always()
+        if: success()
         with:
+{%- if os != "windows-arm64" %}
+          name: !{{ wheel_artifact('matrix.build_name', 'unsigned') }}
+{%- else %}
           name: ${{ matrix.build_name }}
+{%- endif %}
           retention-days: 14
           if-no-files-found: error
           path: "${{ env.PYTORCH_FINAL_PACKAGE_DIR }}"
@@ -187,10 +199,38 @@ jobs:
       !{{ common.wait_and_kill_ssh_windows() }}
 {% endif %}
 
+
+{%- if os != "windows-arm64" %}
+  wheel-sign:
+    name: ${{ matrix.build_name }}-sign
+    needs: wheel-build
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/_binary-windows-sign.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        {%- for config in build_configs %}
+          - build_name: "!{{ config['build_name'] }}"
+            backend: "!{{ config['gpu_arch_type'] }}"
+        {%- endfor %}
+    with:
+      enabled: ${{ !{{ signing_requested('matrix.build_name') }} }}
+      build_name: ${{ matrix.build_name }}
+      backend: ${{ matrix.backend }}
+{%- endif %}
+
   wheel-test:
     name: ${{ matrix.build_name }}-test
+{%- if os != "windows-arm64" %}
+    if: ${{ !cancelled() && github.repository_owner == 'pytorch' && needs.wheel-build.result == 'success' && (needs.wheel-sign.result == 'success' || needs.wheel-sign.result == 'skipped') }}
+    needs: [get-label-type, wheel-build, wheel-sign]
+{%- else %}
     if: ${{ github.repository_owner == 'pytorch' }}
     needs: [get-label-type, wheel-build]
+{%- endif %}
 {%- if os == "windows-arm64" %}
     runs-on: "windows-11-arm64-preview"
 {%- else %}
@@ -236,6 +276,9 @@ jobs:
       GPU_ARCH_TYPE: ${{ matrix.gpu_arch_type }}
       SKIP_ALL_TESTS: 1
       DESIRED_PYTHON: ${{ matrix.desired_python }}
+{%- if os != "windows-arm64" %}
+      WINDOWS_WHEEL_REQUIRE_SIGNED: ${{ !{{ signing_requested('matrix.build_name') }} }}
+{%- endif %}
       {%- if first['package_type'] == 'libtorch' %}
       LIBTORCH_CONFIG: ${{ matrix.libtorch_config }}
       LIBTORCH_VARIANT: ${{ matrix.libtorch_variant }}
@@ -277,7 +320,11 @@ jobs:
       - uses: !{{ common.download_artifact_action }}
         name: Download Build Artifacts
         with:
+{%- if os != "windows-arm64" %}
+          name: !{{ wheel_artifact('matrix.build_name') }}
+{%- else %}
           name: ${{ matrix.build_name }}
+{%- endif %}
           path: "${{ env.PYTORCH_FINAL_PACKAGE_DIR }}"
       - name: Populate binary env
         shell: bash
@@ -295,7 +342,7 @@ jobs:
 
   wheel-upload:
     name: ${{ matrix.build_name }}-upload
-    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && github.repository_owner == 'pytorch' }}
+    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && needs.wheel-test.result == 'success' && github.repository_owner == 'pytorch' }}
     permissions:
       id-token: write
       contents: read
@@ -330,6 +377,11 @@ jobs:
       LIBTORCH_VARIANT: ${{ matrix.libtorch_variant }}
       {%- endif %}
       build_name: ${{ matrix.build_name }}
+{%- if os != "windows-arm64" %}
+      artifact_name: !{{ wheel_artifact('matrix.build_name') }}
+      verify_windows_wheel: true
+      require_windows_signed: ${{ !{{ signing_requested('matrix.build_name') }} }}
+{%- endif %}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -342,7 +394,7 @@ jobs:
   !{{ lt_config["build_name"] }}-extract:
     if: ${{ github.repository_owner == 'pytorch' }}
     needs:
-      - wheel-build
+      - wheel-test
     runs-on: "mt-l-x86iavx512-16-128"
     container:
       image: python:3.11
@@ -362,7 +414,11 @@ jobs:
       - uses: !{{ common.download_artifact_action }}
         name: Download Wheel Artifact
         with:
+{%- if os != "windows-arm64" %}
+          name: !{{ wheel_artifact("'" + lt_config["source_wheel_build_name"] + "'") }}
+{%- else %}
           name: !{{ lt_config["source_wheel_build_name"] }}
+{%- endif %}
           path: "${{ runner.temp }}/wheel_artifact/"
       - name: Extract libtorch from wheel
         shell: bash
