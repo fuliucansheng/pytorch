@@ -67,6 +67,8 @@ from typing_extensions import ParamSpec, TypeIs
 
 import torch
 import torch._functorch.config
+import torch._logging
+import torch._numpy as tnp
 import torch.fx.experimental.symbolic_shapes
 import torch.utils._pytree as pytree
 from torch import fx
@@ -79,7 +81,14 @@ from torch._C import (
 from torch._C._dynamo.utils import get_current_stream  # noqa: F401
 from torch._dispatch.python import enable_python_dispatcher
 from torch._dynamo.metrics_context import MetricsContext, RuntimeMetricsContext
-from torch._guards import CompileId, Source, TracingContext
+from torch._guards import (
+    CompileId,
+    detect_fake_mode,  # noqa: F401
+    Source,
+    TracingContext,
+)
+from torch._logging import LazyString
+from torch._subclasses.fake_tensor import is_fake
 from torch._subclasses.meta_utils import is_sparse_compressed
 from torch._utils_internal import (
     justknobs_check,
@@ -127,35 +136,26 @@ try:
 except ModuleNotFoundError:
     np = None  # type: ignore[assignment]
 
-try:
-    import torch._logging
-    import torch._numpy as tnp
-    from torch._guards import detect_fake_mode  # noqa: F401
-    from torch._logging import LazyString
+# NOTE: Make sure `NP_SUPPORTED_MODULES` and `NP_TO_TNP_MODULE` are in sync.
+if np:
+    NP_SUPPORTED_MODULES: tuple[types.ModuleType, ...] = (
+        np,
+        np.fft,
+        np.linalg,
+        np.random,
+    )
 
-    # NOTE: Make sure `NP_SUPPORTED_MODULES` and `NP_TO_TNP_MODULE` are in sync.
-    if np:
-        NP_SUPPORTED_MODULES: tuple[types.ModuleType, ...] = (
-            np,
-            np.fft,
-            np.linalg,
-            np.random,
-        )
+    NP_TO_TNP_MODULE = {
+        np: tnp,
+        np.fft: tnp.fft,
+        np.linalg: tnp.linalg,
+        np.random: tnp.random,
+    }
+else:
+    NP_SUPPORTED_MODULES = ()
 
-        NP_TO_TNP_MODULE = {
-            np: tnp,
-            np.fft: tnp.fft,
-            np.linalg: tnp.linalg,
-            np.random: tnp.random,
-        }
-    else:
-        NP_SUPPORTED_MODULES = ()
-
-        # pyrefly: ignore [implicit-any]
-        NP_TO_TNP_MODULE = {}
-    from torch._subclasses.fake_tensor import is_fake
-except ImportError:
-    pass
+    # pyrefly: ignore [implicit-any]
+    NP_TO_TNP_MODULE = {}
 
 
 T = TypeVar("T")
