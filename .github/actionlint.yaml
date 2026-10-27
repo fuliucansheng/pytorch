@@ -16,6 +16,8 @@ self-hosted-runner:
     - windows.12xlarge.nonephemeral
     - windows.4xlarge
     - windows.4xlarge.nonephemeral
+    # Proposed protected runner; provision only when Windows wheel signing is enabled.
+    - windows-wheel-signing
     # Windows ARM64 runners
     - windows-11-arm64
     - windows-11-arm64-preview

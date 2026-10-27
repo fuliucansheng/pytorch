@@ -138,7 +138,7 @@ jobs:
         run: |
           "${PYTORCH_ROOT}/.ci/pytorch/binary_windows_build.sh"
       - uses: actions/upload-artifact@v4.4.0
-        if: always()
+        if: success()
         with:
           name: ${{ matrix.build_name }}
           retention-days: 14
@@ -225,7 +225,7 @@ jobs:
 
   wheel-upload:
     name: ${{ matrix.build_name }}-upload
-    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && github.repository_owner == 'pytorch' }}
+    if: ${{ !cancelled() && needs.get-label-type.result == 'success' && needs.wheel-test.result == 'success' && github.repository_owner == 'pytorch' }}
     permissions:
       id-token: write
       contents: read
@@ -268,7 +268,7 @@ jobs:
   libtorch-arm64-cpu-shared-with-deps-release-extract:
     if: ${{ github.repository_owner == 'pytorch' }}
     needs:
-      - wheel-build
+      - wheel-test
     runs-on: "mt-l-x86iavx512-16-128"
     container:
       image: python:3.11

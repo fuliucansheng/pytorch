@@ -8,6 +8,18 @@ on:
         required: true
         type: string
         description: The build's name
+      artifact_name:
+        type: string
+        default: ""
+        description: Final artifact name; defaults to build_name
+      verify_windows_wheel:
+        type: boolean
+        default: false
+        description: Verify the final Windows wheel digest, source/run and full RECORD
+      require_windows_signed:
+        type: boolean
+        default: false
+        description: Require a successful protected Windows signing handoff
       use_s3:
         type: boolean
         default: true
@@ -99,6 +111,7 @@ jobs:
           fetch-depth: "1"
           sparse-checkout: |
             .ci/pytorch/binary_upload.sh
+            .ci/wheel/windows/sign_wheel.py
 
       - name: Configure AWS credentials(PyTorch account) for nightly
         if: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/nightly' }}
@@ -122,8 +135,23 @@ jobs:
         continue-on-error: ${{ !(github.event_name == 'push' && (github.event.ref == 'refs/heads/nightly' || (startsWith(github.event.ref, 'refs/tags/') && !startsWith(github.event.ref, 'refs/tags/ciflow/')))) }}
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: ${{ inputs.build_name }}
+          name: ${{ inputs.artifact_name || inputs.build_name }}
           path: "${{ runner.temp }}/artifacts/"
+
+      - name: Verify final Windows wheel handoff
+        id: verify-windows-wheel
+        if: ${{ (inputs.verify_windows_wheel || inputs.require_windows_signed) && steps.download-artifacts.outcome == 'success' }}
+        shell: bash
+        env:
+          REQUIRE_WINDOWS_SIGNED: ${{ inputs.require_windows_signed }}
+          FINAL_WHEEL_DIR: ${{ runner.temp }}/artifacts
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$REQUIRE_WINDOWS_SIGNED" == "true" ]]; then
+            args+=(--require-signed)
+          fi
+          python .ci/wheel/windows/sign_wheel.py check "$FINAL_WHEEL_DIR" "${args[@]}"
 
       - name: Set DRY_RUN (only for tagged pushes)
         if: ${{ github.event_name == 'push' && (github.event.ref == 'refs/heads/nightly' || (startsWith(github.event.ref, 'refs/tags/') && !startsWith(github.event.ref, 'refs/tags/ciflow/'))) }}
@@ -140,7 +168,7 @@ jobs:
           fi
 
       - name: Upload binaries
-        if: steps.download-artifacts.outcome && steps.download-artifacts.outcome == 'success'
+        if: ${{ success() && steps.download-artifacts.outcome == 'success' && (!(inputs.verify_windows_wheel || inputs.require_windows_signed) || steps.verify-windows-wheel.outcome == 'success') }}
         shell: bash
         env:
           PKG_DIR: "${{ runner.temp }}/artifacts"
