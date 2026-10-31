@@ -1909,6 +1909,76 @@ class TestUnaryUfuncs(TestCase):
 class TestUnaryUfuncsCpuOnly(TestCase):
     hw_classification = HardwareClassification.CPU
 
+    _SQRT_ROUNDING_CASES = {
+        torch.float32: (
+            (
+                "0x1.0023e2p-1 0x1.00b2e4p-1 0x1.00c15ap-1 0x1.00cd86p-1 "
+                "0x1.00ef8p-1 0x1.011942p-1 0x1.012e9p-1 0x1.019fe6p-1 "
+                "0x1.01a62cp-1 0x1.01f6ecp-1 0x1.01f968p-1 0x1.021f0ep-1 "
+                "0x1.0236bp-1 0x1.023c78p-1 0x1.0299ap-1 0x1.02a5a4p-1 "
+                "0x1.02c3fcp-1 0x1.032618p-1 0x1.033642p-1 0x1.0339bap-1 "
+                "0x1.03df3ep-1 0x1.040666p-1 0x1.04283ep-1 0x1.043efap-1 "
+                "0x1.04858ep-1 0x1.048ee8p-1 0x1.04a76p-1 0x1.052c66p-1 "
+                "0x1.056efp-1 0x1.059f1ap-1 0x1.05b59cp-1 0x1.0661d8p-1"
+            ),
+            (
+                "0x1.6a2346p-1 0x1.6a884ep-1 0x1.6a9286p-1 0x1.6a9b1cp-1 "
+                "0x1.6ab31ap-1 0x1.6ad092p-1 0x1.6adf9ap-1 0x1.6b2f84p-1 "
+                "0x1.6b33f2p-1 0x1.6b6cd6p-1 0x1.6b6e96p-1 0x1.6b891cp-1 "
+                "0x1.6b99cp-1 0x1.6b9ddp-1 0x1.6bdf6p-1 0x1.6be7d4p-1 "
+                "0x1.6bfd2ep-1 0x1.6c4226p-1 0x1.6c4d82p-1 0x1.6c4ff4p-1 "
+                "0x1.6cc42ep-1 0x1.6cdfaap-1 0x1.6cf768p-1 0x1.6d075ap-1 "
+                "0x1.6d38d6p-1 0x1.6d3f64p-1 0x1.6d508ap-1 0x1.6dadb4p-1 "
+                "0x1.6ddc46p-1 0x1.6dfdf8p-1 0x1.6e0db6p-1 0x1.6e8616p-1"
+            ),
+        ),
+        torch.float64: (
+            (
+                "0x1.000000002b505p-1 0x1.000000006bd8ap-1 0x1.000000014507dp-1 0x1.0000000185902p-1 "
+                "0x1.000000021e37p-1 0x1.000000025ebf5p-1 0x1.00000002f7663p-1 0x1.00000003900d1p-1 "
+                "0x1.00000003d0956p-1 0x1.0000000428b3fp-1 0x1.00000004693c4p-1 0x1.00000004c15adp-1 "
+                "0x1.0000000501e32p-1 0x1.000000055a01bp-1 0x1.00000005f2a89p-1 0x1.000000064ac72p-1 "
+                "0x1.00000006e36ep-1 0x1.000000073b8c9p-1 0x1.0000000793ab2p-1 0x1.0000000884709p-1 "
+                "0x1.00000008dc8f2p-1 0x1.0000000934adbp-1 0x1.000000098ccc4p-1 0x1.00000009e4eadp-1 "
+                "0x1.0000000a3d096p-1 0x1.0000000a9527fp-1 0x1.0000000b5cfb5p-1 0x1.0000000bb519ep-1 "
+                "0x1.0000000cd50bdp-1 0x1.0000000d9cdf3p-1 0x1.0000000ed4676p-1 0x1.00000012520dep-1"
+            ),
+            (
+                "0x1.6a09e668125d6p-1 0x1.6a09e6683fffp-1 0x1.6a09e668d991ap-1 0x1.6a09e66907333p-1 "
+                "0x1.6a09e66973243p-1 0x1.6a09e669a0c5cp-1 0x1.6a09e66a0cb6cp-1 0x1.6a09e66a78a7bp-1 "
+                "0x1.6a09e66aa6494p-1 0x1.6a09e66ae498ap-1 0x1.6a09e66b123a3p-1 0x1.6a09e66b50899p-1 "
+                "0x1.6a09e66b7e2b2p-1 0x1.6a09e66bbc7a8p-1 0x1.6a09e66c286b6p-1 0x1.6a09e66c66bacp-1 "
+                "0x1.6a09e66cd2abap-1 0x1.6a09e66d10fbp-1 0x1.6a09e66d4f4a5p-1 0x1.6a09e66df98a8p-1 "
+                "0x1.6a09e66e37d9dp-1 0x1.6a09e66e76292p-1 0x1.6a09e66eb4787p-1 0x1.6a09e66ef2c7cp-1 "
+                "0x1.6a09e66f31171p-1 0x1.6a09e66f6f666p-1 0x1.6a09e66ffcb2cp-1 0x1.6a09e6703b021p-1 "
+                "0x1.6a09e671069dbp-1 0x1.6a09e67193eap-1 0x1.6a09e67270335p-1 0x1.6a09e674e81b5p-1"
+            ),
+        ),
+    }
+
+    @dtypes(torch.float32, torch.float64)
+    @parametrize("operation", ("sqrt", "pow"))
+    @parametrize("stride", (1, 2))
+    @parametrize("repeats", (1, 128))
+    def test_sqrt_correctly_rounded(self, device, dtype, operation, stride, repeats):
+        inputs_hex, expected_hex = self._SQRT_ROUNDING_CASES[dtype]
+        input_values = torch.tensor(
+            [float.fromhex(value) for value in inputs_hex.split()],
+            device=device,
+            dtype=dtype,
+        ).repeat(repeats)
+        expected = torch.tensor(
+            [float.fromhex(value) for value in expected_hex.split()],
+            device=device,
+            dtype=dtype,
+        ).repeat(repeats)
+        storage = torch.empty(input_values.numel() * stride, device=device, dtype=dtype)
+        inputs = storage[::stride]
+        inputs.copy_(input_values)
+        actual = torch.sqrt(inputs) if operation == "sqrt" else torch.pow(inputs, 0.5)
+        bit_dtype = torch.int32 if dtype == torch.float32 else torch.int64
+        self.assertEqual(actual.view(bit_dtype), expected.view(bit_dtype))
+
     def test_op_invert(self, device):
         res = 0xFFFF - torch.arange(127, dtype=torch.int8)
         for dtype in (torch.uint8, torch.int8, torch.int16, torch.int32, torch.int64):
