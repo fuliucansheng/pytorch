@@ -1149,6 +1149,16 @@ class TestPoolingNNDevice(NNTestCase):
                 ),
                 name="case10",
             ),
+            subtest(
+                ("MaxUnpool2d", (2, 2), (1, 1, 2, 2), 2**32 + 3, True),
+                name="int64_positive_wraparound",
+                decorators=[onlyCUDA],
+            ),
+            subtest(
+                ("MaxUnpool2d", (2, 2), (1, 1, 2, 2), -(2**32) + 3, True),
+                name="int64_negative_wraparound",
+                decorators=[onlyCUDA],
+            ),
         ],
     )
     def test_MaxUnpool_index_errors(
