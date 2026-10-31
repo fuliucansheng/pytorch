@@ -12582,6 +12582,95 @@ class TestCudaOptims(TestCase):
     # to apply the new OptimizerInfo structure.
 
     @onlyCUDA
+    @unittest.skipIf(not TEST_CUDA_GRAPH, "CUDA graphs are required")
+    @parametrize("beta_shape", [(), (1,)])
+    @parametrize("beta_dtype", [torch.float32, torch.float64])
+    @parametrize("amsgrad", [False, True])
+    @parametrize("maximize", [False, True])
+    @optims(
+        [
+            optim
+            for optim in optim_db
+            if optim.optim_cls in (torch.optim.Adam, torch.optim.AdamW)
+        ],
+        dtypes=[
+            torch.float16,
+            torch.bfloat16,
+            torch.float32,
+            torch.float64,
+            torch.complex64,
+        ],
+    )
+    def test_graph_adam_single_tensor_betas(
+        self, device, dtype, optim_info, beta_shape, beta_dtype, amsgrad, maximize
+    ):
+        parameters = [
+            torch.linspace(0.5, 1.5, 12, device=device, dtype=dtype).reshape(3, 4),
+            torch.tensor(0.5, device=device, dtype=dtype),
+        ]
+        if dtype.is_complex:
+            parameters = [parameter * (1 + 0.5j) for parameter in parameters]
+        references = [parameter.clone() for parameter in parameters]
+        gradients = [
+            torch.linspace(0.0625, 0.3125, parameter.numel(), device=device)
+            .reshape_as(parameter)
+            .to(dtype)
+            for parameter in parameters
+        ]
+        if dtype.is_complex:
+            gradients = [gradient * (1 + 0.25j) for gradient in gradients]
+        for parameter, reference, gradient in zip(parameters, references, gradients):
+            parameter.grad = gradient.clone()
+            reference.grad = gradient.clone()
+        initial_betas = (0.875, 0.9375)
+        betas = tuple(
+            torch.tensor(value, device=device, dtype=beta_dtype).reshape(beta_shape)
+            for value in initial_betas
+        )
+        options = dict(
+            lr=0.01,
+            weight_decay=0.01,
+            foreach=False,
+            fused=False,
+            amsgrad=amsgrad,
+            maximize=maximize,
+        )
+        optimizer = optim_info.optim_cls(
+            parameters, betas=betas, capturable=True, **options
+        )
+        reference_optimizer = optim_info.optim_cls(
+            references, betas=initial_betas, capturable=False, **options
+        )
+        stream = torch.cuda.Stream()
+        stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(stream):
+            for _ in range(3):
+                optimizer.step()
+                reference_optimizer.step()
+        torch.cuda.current_stream().wait_stream(stream)
+
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph):
+            optimizer.step()
+        schedule = ((0.875, 0.9375), (0.5, 0.75), (0.75, 0.875), (0.25, 0.5))
+        for replay_index, beta_values in enumerate(schedule):
+            for beta, value in zip(betas, beta_values):
+                beta.fill_(value)
+            reference_optimizer.param_groups[0]["betas"] = beta_values
+            for parameter, reference, gradient in zip(
+                parameters, references, gradients
+            ):
+                parameter.grad.copy_(gradient * (1 + replay_index * 0.125))
+                reference.grad.copy_(parameter.grad)
+            graph.replay()
+            reference_optimizer.step()
+            self.assertEqual(parameters, references)
+            for parameter, reference in zip(parameters, references):
+                self.assertEqual(
+                    optimizer.state[parameter], reference_optimizer.state[reference]
+                )
+
+    @onlyCUDA
     @unittest.skipIf(
         not TEST_CUDA_GRAPH, "CUDA >= 11.0 or ROCM >=5.3 required for graphs"
     )

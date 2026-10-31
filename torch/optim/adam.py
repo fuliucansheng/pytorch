@@ -472,6 +472,8 @@ def _single_tensor_adam(
                 exp_avg_sq.mul_(beta2).addcmul_(
                     grad, grad, value=cast(float, 1 - beta2)
                 )
+        elif capturable and isinstance(beta2, Tensor) and not beta2.is_cpu:
+            exp_avg_sq.mul_(beta2).addcmul_(grad, grad * (1 - beta2))
         else:
             exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)  # type: ignore[arg-type]
 
