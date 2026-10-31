@@ -8,6 +8,7 @@ configuration lives in the sibling `build_env_setup.py`; both scripts run
 independently and hand env back to a parent bash wrapper via --env-out.
 
 Environment variables:
+    GPU_ARCH_TYPE - cpu builds avoid the Intel OpenMP 2026 runtime series
     SKIP_SETUP_CLEAN - skip `spin clean` when set (build/ shared across Pythons)
 """
 
@@ -47,6 +48,11 @@ PIP_PACKAGES: list[str] = [
     "scikit-build-core==1.1.1",
     "spin==0.17",
 ]
+
+
+if os.environ.get("GPU_ARCH_TYPE") == "cpu":
+    # Intel OpenMP 2026 retains workers after short-lived callers exit (#200416).
+    PIP_PACKAGES.append("intel-openmp<2026")
 
 
 LIBUV_URL = "https://s3.amazonaws.com/ossci-windows/libuv-1.40.0-h8ffe710_0.tar.bz2"
