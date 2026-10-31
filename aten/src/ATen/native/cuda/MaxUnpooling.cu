@@ -44,7 +44,7 @@ __global__ void max_unpooling2d_forward_kernel(
     int c = (linearIndex / inputWidth / inputHeight) % numChannels;
     int n = linearIndex / inputWidth / inputHeight / numChannels;
     output += (n * numChannels + c) * outputHeight * outputWidth;
-    int maxind = indices[linearIndex];
+    int64_t maxind = indices[linearIndex];
     CUDA_KERNEL_ASSERT(maxind >= 0 && maxind < outputImageSize);
     output[maxind] = input[linearIndex];
   }
