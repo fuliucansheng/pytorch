@@ -22852,6 +22852,8 @@ DecorateInfo(unittest.skip("Skipped!"), 'TestDecomp', 'test_quick'),
             t for t in all_types_and(torch.float16, torch.bfloat16, torch.bool) if t != torch.int64
         ),
         dtypesIfHpu=custom_types(torch.float32, torch.bfloat16),
+        supports_forward_ad=True,
+        supports_fwgrad_bwgrad=True,
         sample_inputs_func=sample_inputs_scatter_reduce,
     ),
     OpInfo(
