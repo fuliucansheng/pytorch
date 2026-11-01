@@ -1550,8 +1550,8 @@
   result: auto_linear
 
 - name: sigmoid(Tensor self) -> Tensor
-  self: sigmoid_backward(grad, result)
-  result: auto_element_wise
+  self: sigmoid_backward_from_input(grad, self.clone(), result)
+  result: sigmoid_backward_from_input(self_t.conj(), self_p, result).conj()
 
 - name: logit(Tensor self, float? eps=None) -> Tensor
   self: "GradMode::is_enabled() ? infinitely_differentiable_logit_backward(grad, self, eps) : logit_backward(grad, self, eps)"
@@ -1788,8 +1788,8 @@
   result: auto_element_wise
 
 - name: tanh(Tensor self) -> Tensor
-  self: tanh_backward(grad, result)
-  result: auto_element_wise
+  self: tanh_backward_from_input(grad, self.clone(), result)
+  result: tanh_backward_from_input(self_t.conj(), self_p, result).conj()
 
 - name: topk(Tensor self, SymInt k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor values, Tensor indices)
   self: value_selecting_reduction_backward_symint(grad, dim, indices, self.sym_sizes(), true)

@@ -66,6 +66,36 @@ class TestGenPyi(unittest.TestCase):
 
 
 class TestCreateDerivative(unittest.TestCase):
+    def test_saved_input_clone(self) -> None:
+        schema = FunctionSchema.parse("func(Tensor self) -> Tensor")
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        derivative = load_derivatives.create_derivative(
+            native_function,
+            formula="func_backward(grad, self.clone(), result)",
+            var_names=("self",),
+            available_named_gradients=[],
+        )
+        self.assertEqual(derivative.formula, "func_backward(grad, self_clone, result)")
+        self.assertEqual(len(derivative.saved_inputs), 1)
+        self.assertEqual(derivative.saved_inputs[0].nctype.name, "self_clone")
+        self.assertEqual(derivative.saved_inputs[0].expr, "self.clone()")
+        self.assertEqual(derivative.saved_outputs[0].nctype.name, "result")
+
+    def test_saved_input_and_clone_are_distinct(self) -> None:
+        schema = FunctionSchema.parse("func(Tensor self) -> Tensor")
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        derivative = load_derivatives.create_derivative(
+            native_function,
+            formula="func_backward(grad, self, self.clone())",
+            var_names=("self",),
+            available_named_gradients=[],
+        )
+        saved = {
+            attribute.nctype.name: attribute.expr
+            for attribute in derivative.saved_inputs
+        }
+        self.assertEqual(saved, {"self": "self", "self_clone": "self.clone()"})
+
     def test_named_grads(self) -> None:
         schema = FunctionSchema.parse(
             "func(Tensor a, Tensor b) -> (Tensor x, Tensor y)"

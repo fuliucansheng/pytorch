@@ -1529,7 +1529,11 @@ def emit_body(
                 or (is_output and type == BaseCType(scalarT))
             ):
                 # note(crcrpar): Here `expr` is generated from scratch, `arg.expr` is ignored.
-                var = name
+                snapshot_source = name.removesuffix("_clone")
+                is_snapshot = (
+                    name.endswith("_clone") and arg.expr == f"{snapshot_source}.clone()"
+                )
+                var = snapshot_source if is_snapshot else name
                 name += "_"
                 if var == "self" and inplace:
                     original_self_var = (
@@ -1544,6 +1548,8 @@ def emit_body(
                         raise AssertionError(
                             "is_output should be False when var == 'self' and inplace"
                         )
+                elif is_snapshot:
+                    var += ".clone()"
                 if inplace and is_output:
                     if name != "result_":
                         raise AssertionError(

@@ -1161,6 +1161,78 @@ void silu_kernel(TensorIteratorBase& iter) {
     }
 }
 
+template <typename scalar_t, bool IsTanh, bool Negate>
+void stable_activation_backward_kernel_impl(TensorIteratorBase& iter) {
+        using opmath_t = at::opmath_type<scalar_t>;
+        using Vec = Vectorized<opmath_t>;
+        const auto root_vector = [](Vec input) {
+          const Vec one(1);
+          const Vec exponent_scale(IsTanh ? 1 : 0.5);
+          const Vec root_scale(IsTanh ? 2 : 1);
+          const auto exponential = (input.abs().neg() * exponent_scale).exp();
+          return (root_scale * exponential) / (one + exponential * exponential);
+        };
+        const auto scalar_function = [](scalar_t gradient, scalar_t input) -> scalar_t {
+          const opmath_t exponential =
+              std::exp(-std::abs(opmath_t(input)) * opmath_t(IsTanh ? 1 : 0.5));
+          const opmath_t root = opmath_t(IsTanh ? 2 : 1) * exponential /
+              (opmath_t(1) + exponential * exponential);
+          const opmath_t signed_gradient = Negate ? -opmath_t(gradient) : opmath_t(gradient);
+          return static_cast<scalar_t>((signed_gradient * root) * root);
+        };
+        if constexpr (
+            std::is_same_v<scalar_t, c10::Half> ||
+            std::is_same_v<scalar_t, c10::BFloat16>) {
+          cpu_kernel_vec(
+              iter,
+              scalar_function,
+              [root_vector](Vectorized<scalar_t> gradient, Vectorized<scalar_t> input) {
+                auto [input0, input1] = convert_to_float<scalar_t>(input);
+                auto [gradient0, gradient1] = convert_to_float<scalar_t>(gradient);
+                const auto root0 = root_vector(input0);
+                const auto root1 = root_vector(input1);
+                if constexpr (Negate) {
+                  gradient0 = gradient0.neg();
+                  gradient1 = gradient1.neg();
+                }
+                return convert_from_float<scalar_t>(
+                    (gradient0 * root0) * root0,
+                    (gradient1 * root1) * root1);
+              });
+        } else {
+          cpu_kernel_vec(
+              iter,
+              scalar_function,
+              [root_vector](Vec gradient, Vec input) {
+                const auto root = root_vector(input);
+                if constexpr (Negate) {
+                  gradient = gradient.neg();
+                }
+                return (gradient * root) * root;
+              });
+        }
+}
+
+template <bool IsTanh, bool Negate>
+void stable_activation_backward_kernel(TensorIteratorBase& iter) {
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      kHalf, kBFloat16, iter.dtype(), "stable_activation_backward_cpu", [&]() {
+        stable_activation_backward_kernel_impl<scalar_t, IsTanh, Negate>(iter);
+      });
+}
+
+void sigmoid_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<false, false>(iter);
+}
+
+void tanh_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<true, false>(iter);
+}
+
+void log_sigmoid_double_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<false, true>(iter);
+}
+
 void silu_backward_kernel(TensorIteratorBase& iter) {
   if (at::isReducedFloatingType(iter.dtype())) {
     AT_DISPATCH_REDUCED_FLOATING_TYPES(iter.dtype(), "silu_backward_cpu", [&]() {
@@ -1312,6 +1384,9 @@ void prelu_backward_kernel(TensorIterator& iter) {
 
 
 REGISTER_DISPATCH(hardsigmoid_stub, &hardsigmoid_kernel)
+REGISTER_DISPATCH(sigmoid_backward_from_input_stub, &sigmoid_backward_from_input_kernel)
+REGISTER_DISPATCH(tanh_backward_from_input_stub, &tanh_backward_from_input_kernel)
+REGISTER_DISPATCH(log_sigmoid_double_backward_from_input_stub, &log_sigmoid_double_backward_from_input_kernel)
 REGISTER_DISPATCH(hardsigmoid_backward_stub, &hardsigmoid_backward_kernel)
 REGISTER_DISPATCH(threshold_stub, &threshold_kernel)
 REGISTER_DISPATCH(leaky_relu_stub, &leaky_relu_kernel)

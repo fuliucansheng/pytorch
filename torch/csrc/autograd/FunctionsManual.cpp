@@ -8,6 +8,7 @@
 #include <ATen/Dispatch.h>
 #include <ATen/OpMathType.h>
 #include <ATen/SparseCsrTensorUtils.h>
+#include <ATen/TensorIterator.h>
 #include <ATen/TensorSubclassLikeUtils.h>
 #include <ATen/WrapDimUtils.h>
 #include <ATen/WrapDimUtilsMulti.h>
@@ -2577,11 +2578,101 @@ Tensor glu_double_backward_grad_output(
       tmp.narrow(dim, sizes[dim], sizes[dim]);
 }
 
+static std::tuple<Tensor, Tensor, Tensor> sigmoid_derivative_factors(
+    const Tensor& input) {
+  const auto work = at::isReducedFloatingType(input.scalar_type())
+      ? input.to(at::kFloat)
+      : input;
+  const auto negative_magnitude = at::where(work < 0, work, -work);
+  const auto half_exponential = (negative_magnitude * 0.5).exp();
+  const auto denominator = 1 + half_exponential.square();
+  const auto root = half_exponential / denominator;
+  return {root, half_exponential, denominator};
+}
+
+static bool can_use_stable_activation_backward_cpu(
+    const Tensor& grad,
+    const Tensor& input) {
+  return !at::GradMode::is_enabled() && input.device().is_cpu() &&
+      grad.device().is_cpu() && input.layout() == at::kStrided &&
+      grad.layout() == at::kStrided && !input.is_nested() &&
+      !grad.is_nested() && input.is_floating_point() &&
+      input.scalar_type() == grad.scalar_type() && !input.is_neg() &&
+      !grad.is_neg() && !input.is_conj() && !grad.is_conj() &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::Functionalize) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerFrontMode) &&
+      !isTensorSubclassLike(input) && !isTensorSubclassLike(grad) &&
+      !isFwGradDefined(input) && !isFwGradDefined(grad);
+}
+
+static Tensor stable_activation_backward_cpu(
+    const Tensor& grad,
+    const Tensor& input,
+    bool is_tanh,
+    bool negate = false) {
+  Tensor result;
+  auto iterator = at::TensorIterator::binary_op(result, grad, input);
+  if (is_tanh) {
+    at::native::tanh_backward_from_input_stub(at::kCPU, iterator);
+  } else if (negate) {
+    at::native::log_sigmoid_double_backward_from_input_stub(at::kCPU, iterator);
+  } else {
+    at::native::sigmoid_backward_from_input_stub(at::kCPU, iterator);
+  }
+  return iterator.output();
+}
+
+Tensor sigmoid_backward_from_input(
+    const Tensor& grad,
+    const Tensor& input,
+    const Tensor& output) {
+  if (input.is_complex()) {
+    return at::sigmoid_backward(grad, output);
+  }
+  if (can_use_stable_activation_backward_cpu(grad, input)) {
+    return stable_activation_backward_cpu(grad, input, false);
+  }
+  const auto root = std::get<0>(sigmoid_derivative_factors(input));
+  return ((grad * root) * root).to(input.scalar_type());
+}
+
+Tensor tanh_backward_from_input(
+    const Tensor& grad,
+    const Tensor& input,
+    const Tensor& output) {
+  if (input.is_complex()) {
+    return at::tanh_backward(grad, output);
+  }
+  if (can_use_stable_activation_backward_cpu(grad, input)) {
+    return stable_activation_backward_cpu(grad, input, true);
+  }
+  const auto work = at::isReducedFloatingType(input.scalar_type())
+      ? input.to(at::kFloat)
+      : input;
+  const auto negative_magnitude = at::where(work < 0, work, -work);
+  const auto exponential = negative_magnitude.exp();
+  const auto root = 2 * exponential / (1 + exponential.square());
+  return ((grad * root) * root).to(input.scalar_type());
+}
+
 Tensor infinitely_differentiable_silu_backward(
     const Tensor& grad_output,
     const Tensor& input) {
-  const Tensor sigmoid = input.sigmoid();
-  return grad_output * sigmoid * (1.0 + input * (1.0 - sigmoid));
+  if (input.is_complex()) {
+    const Tensor sigmoid = input.sigmoid();
+    return grad_output * sigmoid * (1.0 + input * (1.0 - sigmoid));
+  }
+  const auto [root, half_exponential, denominator] =
+      sigmoid_derivative_factors(input);
+  const auto work = at::isReducedFloatingType(input.scalar_type())
+      ? input.to(at::kFloat)
+      : input;
+  const auto sigmoid =
+      at::where(work < 0, half_exponential * root, denominator.reciprocal());
+  return (grad_output * (sigmoid + (work * root) * root))
+      .to(input.scalar_type());
 }
 
 Tensor infinitely_differentiable_mish_backward(
@@ -2794,8 +2885,15 @@ Tensor binary_cross_entropy_with_logits_target_backward(
 }
 
 Tensor log_sigmoid_double_backward(const Tensor& grad, const Tensor& input) {
-  auto z = input.sigmoid();
-  return grad * (z - 1) * z;
+  if (input.is_complex()) {
+    const auto sigmoid = input.sigmoid();
+    return grad * (sigmoid - 1) * sigmoid;
+  }
+  if (can_use_stable_activation_backward_cpu(grad, input)) {
+    return stable_activation_backward_cpu(grad, input, false, true);
+  }
+  const auto root = std::get<0>(sigmoid_derivative_factors(input));
+  return (-(grad * root) * root).to(input.scalar_type());
 }
 
 Tensor softmax_double_backward(
