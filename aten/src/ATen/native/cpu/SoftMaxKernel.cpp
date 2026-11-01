@@ -158,6 +158,54 @@ _vec_softmax_lastdim(
   });
 }
 
+template <typename scalar_t>
+inline vec::Vectorized<at::opmath_type<scalar_t>> log_softmax_backward_value(
+    vec::Vectorized<at::opmath_type<scalar_t>> gradient,
+    vec::Vectorized<at::opmath_type<scalar_t>> output,
+    vec::Vectorized<at::opmath_type<scalar_t>> sum,
+    vec::Vectorized<at::opmath_type<scalar_t>> other_sum,
+    vec::Vectorized<at::opmath_type<scalar_t>> dominant_count) {
+  using opmath_t = at::opmath_type<scalar_t>;
+  using Vec = vec::Vectorized<opmath_t>;
+  auto result = gradient - output.exp() * sum;
+  const auto finite_sum = sum.abs() < Vec(std::numeric_limits<opmath_t>::infinity());
+  const auto dominant = (output > Vec(opmath_t(-0.69314718055994530942))) &
+      (output <= Vec(opmath_t(0))) & finite_sum &
+      (other_sum.abs() < Vec(std::numeric_limits<opmath_t>::infinity())) &
+      (dominant_count == Vec(opmath_t(1)));
+  if (dominant.zero_mask() != (1 << Vec::size()) - 1) {
+    auto stable = gradient * (-output.expm1()) - output.exp() * other_sum;
+    result = Vec::blendv(result, stable, dominant);
+  }
+  const auto tiny = (output < Vec(std::log(std::numeric_limits<opmath_t>::min()))) &
+      (output > Vec(-std::numeric_limits<opmath_t>::infinity())) & finite_sum;
+  if (tiny.zero_mask() != (1 << Vec::size()) - 1) {
+    auto root = (output * Vec(opmath_t(0.5))).exp();
+    result = Vec::blendv(result, gradient - (sum * root) * root, tiny);
+  }
+  return result;
+}
+
+template <typename scalar_t>
+inline at::opmath_type<scalar_t> log_softmax_backward_scalar(
+    at::opmath_type<scalar_t> gradient,
+    at::opmath_type<scalar_t> output,
+    at::opmath_type<scalar_t> sum,
+    at::opmath_type<scalar_t> other_sum,
+    at::opmath_type<scalar_t> dominant_count) {
+  using opmath_t = at::opmath_type<scalar_t>;
+  if (std::isfinite(sum) && std::isfinite(other_sum) && dominant_count == 1 &&
+      output > opmath_t(-0.69314718055994530942) && output <= 0) {
+    return gradient * (-std::expm1(output)) - std::exp(output) * other_sum;
+  }
+  if (std::isfinite(sum) && std::isfinite(output) &&
+      output < std::log(std::numeric_limits<opmath_t>::min())) {
+    const auto root = std::exp(output * opmath_t(0.5));
+    return gradient - (sum * root) * root;
+  }
+  return gradient - std::exp(output) * sum;
+}
+
 template <typename scalar_t, bool log_softmax>
 inline void _vec_host_softmax_backward_lastdim(
     scalar_t* grad_input_data_base,
@@ -179,8 +227,27 @@ inline void _vec_host_softmax_backward_lastdim(
           if constexpr (log_softmax) {
             auto sum = vec::reduce_all<scalar_t>(
                 [](Vec& x, Vec& y) { return x + y; }, grad_data, dim_size);
+            auto other_sum = vec::map2_reduce_all<scalar_t>(
+                [](Vec gradient, Vec output) {
+                  const auto dominant = (output > Vec(-0.69314718055994530942)) &
+                      (output <= Vec(0));
+                  return Vec::blendv(gradient, Vec(0), dominant);
+                },
+                [](Vec left, Vec right) { return left + right; },
+                grad_data, output_data, dim_size);
+            auto dominant_count = vec::map_reduce_all<scalar_t>(
+                [](Vec output) {
+                  const auto dominant = (output > Vec(-0.69314718055994530942)) &
+                      (output <= Vec(0));
+                  return Vec::blendv(Vec(0), Vec(1), dominant);
+                },
+                [](Vec left, Vec right) { return left + right; },
+                output_data, dim_size);
             vec::map2(
-                [sum](Vec x, Vec y) { return x - ((y.exp()) * Vec(sum)); },
+                [sum, other_sum, dominant_count](Vec gradient, Vec output) {
+                  return log_softmax_backward_value<scalar_t>(
+                      gradient, output, Vec(sum), Vec(other_sum), Vec(dominant_count));
+                },
                 grad_input_data,
                 grad_data,
                 output_data,
@@ -435,8 +502,10 @@ _vec_log_softmax_backward(
   parallel_for(
       0, outer_size * num_chunks, 0, [&](int64_t begin, int64_t end) {
         // thread local temp buffer that holds vertical sum result
-        auto buffer = std::make_unique<scalar_t[]>(CHUNK_SIZE);
+        auto buffer = std::make_unique<scalar_t[]>(CHUNK_SIZE * 3);
         scalar_t* tmp_sum_data = buffer.get();
+        scalar_t* tmp_other_sum_data = buffer.get() + CHUNK_SIZE;
+        scalar_t* tmp_dominant_count_data = buffer.get() + CHUNK_SIZE * 2;
 
         for (int64_t i = begin; i < end; i++) {
           int64_t outer_idx = i / num_chunks;
@@ -449,9 +518,13 @@ _vec_log_softmax_backward(
           int64_t d0 = 0;
           for (; d0 < size - (size % Vec::size()); d0 += Vec::size()) {
             zero_vec.store(tmp_sum_data + d0);
+            zero_vec.store(tmp_other_sum_data + d0);
+            zero_vec.store(tmp_dominant_count_data + d0);
           }
           for (; d0 < size; d0++) {
             tmp_sum_data[d0] = scalar_t(0);
+            tmp_other_sum_data[d0] = scalar_t(0);
+            tmp_dominant_count_data[d0] = scalar_t(0);
           }
 
           // compute sum of grad_output
@@ -459,6 +532,8 @@ _vec_log_softmax_backward(
             const scalar_t* grad_output_ptr = grad_output_data_base +
                 outer_idx * outer_stride + dim_idx * inner_size +
                 inner_idx_begin;
+            const scalar_t* output_ptr = output_data_base +
+                outer_idx * outer_stride + dim_idx * inner_size + inner_idx_begin;
 
             int64_t d1 = 0;
             for (; d1 < size - (size % Vec::size()); d1 += Vec::size()) {
@@ -466,9 +541,23 @@ _vec_log_softmax_backward(
               Vec sum_vec = Vec::loadu(tmp_sum_data + d1);
               sum_vec += grad_output_vec;
               sum_vec.store(tmp_sum_data + d1);
+              Vec output_vec = Vec::loadu(output_ptr + d1);
+              Vec other_sum_vec = Vec::loadu(tmp_other_sum_data + d1);
+              const auto dominant = (output_vec > Vec(scalar_t(-0.69314718055994530942))) &
+                  (output_vec <= Vec(scalar_t(0)));
+              other_sum_vec += Vec::blendv(grad_output_vec, Vec(scalar_t(0)), dominant);
+              other_sum_vec.store(tmp_other_sum_data + d1);
+              Vec dominant_count_vec = Vec::loadu(tmp_dominant_count_data + d1);
+              dominant_count_vec += Vec::blendv(Vec(scalar_t(0)), Vec(scalar_t(1)), dominant);
+              dominant_count_vec.store(tmp_dominant_count_data + d1);
             }
             for (; d1 < size; d1++) {
               tmp_sum_data[d1] += grad_output_ptr[d1];
+              if (!(output_ptr[d1] > scalar_t(-0.69314718055994530942) && output_ptr[d1] <= 0)) {
+                tmp_other_sum_data[d1] += grad_output_ptr[d1];
+              } else {
+                tmp_dominant_count_data[d1] += scalar_t(1);
+              }
             }
           }
 
@@ -485,12 +574,16 @@ _vec_log_softmax_backward(
               Vec grad_output_vec = Vec::loadu(grad_output_ptr + d2);
               Vec output_vec = Vec::loadu(output_ptr + d2);
               Vec sum_vec = Vec::loadu(tmp_sum_data + d2);
-              Vec grad_input_vec = grad_output_vec - output_vec.exp() * sum_vec;
+              Vec other_sum_vec = Vec::loadu(tmp_other_sum_data + d2);
+              Vec grad_input_vec = log_softmax_backward_value<scalar_t>(
+                  grad_output_vec, output_vec, sum_vec, other_sum_vec,
+                  Vec::loadu(tmp_dominant_count_data + d2));
               grad_input_vec.store(grad_input_ptr + d2);
             }
             for (; d2 < size; d2++) {
-              grad_input_ptr[d2] = grad_output_ptr[d2] -
-                  std::exp(output_ptr[d2]) * tmp_sum_data[d2];
+              grad_input_ptr[d2] = log_softmax_backward_scalar<scalar_t>(
+                  grad_output_ptr[d2], output_ptr[d2], tmp_sum_data[d2],
+                  tmp_other_sum_data[d2], tmp_dominant_count_data[d2]);
             }
           }
         }
@@ -519,8 +612,10 @@ _vec_log_softmax_backward(
   parallel_for(
       0, outer_size * num_chunks, 0, [&](int64_t begin, int64_t end) {
         // thread local temp buffer that holds vertical sum result
-        auto buffer = std::make_unique<float[]>(CHUNK_SIZE);
+        auto buffer = std::make_unique<float[]>(CHUNK_SIZE * 3);
         float* tmp_sum_data = buffer.get();
+        float* tmp_other_sum_data = buffer.get() + CHUNK_SIZE;
+        float* tmp_dominant_count_data = buffer.get() + CHUNK_SIZE * 2;
 
         // thread local buffer that holds grad_output data in float32
         auto grad_output_buffer = std::make_unique<float[]>(dim_size * CHUNK_SIZE);
@@ -538,9 +633,15 @@ _vec_log_softmax_backward(
           for (; d0 < size - (size % Vec::size()); d0 += Vec::size()) {
             zero_fvec.store(tmp_sum_data + d0);
             zero_fvec.store(tmp_sum_data + d0 + fVec::size());
+            zero_fvec.store(tmp_other_sum_data + d0);
+            zero_fvec.store(tmp_other_sum_data + d0 + fVec::size());
+            zero_fvec.store(tmp_dominant_count_data + d0);
+            zero_fvec.store(tmp_dominant_count_data + d0 + fVec::size());
           }
           for (; d0 < size; d0++) {
             tmp_sum_data[d0] = float(0);
+            tmp_other_sum_data[d0] = float(0);
+            tmp_dominant_count_data[d0] = float(0);
           }
 
           // compute sum of grad_output
@@ -550,6 +651,8 @@ _vec_log_softmax_backward(
                 inner_idx_begin;
             float* grad_output_buffer_ptr =
                 grad_output_buffer_data + dim_idx * CHUNK_SIZE;
+            const scalar_t* output_ptr = output_data_base +
+                outer_idx * outer_stride + dim_idx * inner_size + inner_idx_begin;
 
             int64_t d1 = 0;
             for (; d1 < size - (size % Vec::size()); d1 += Vec::size()) {
@@ -562,6 +665,24 @@ _vec_log_softmax_backward(
               sum_fvec1 += grad_output_fvec1;
               sum_fvec0.store(tmp_sum_data + d1);
               sum_fvec1.store(tmp_sum_data + d1 + fVec::size());
+              auto [output_fvec0, output_fvec1] =
+                  vec::convert_to_float<scalar_t>(Vec::loadu(output_ptr + d1));
+              fVec other_sum_fvec0 = fVec::loadu(tmp_other_sum_data + d1);
+              fVec other_sum_fvec1 = fVec::loadu(tmp_other_sum_data + d1 + fVec::size());
+              const auto dominant0 = (output_fvec0 > fVec(float(-0.69314718055994530942))) &
+                  (output_fvec0 <= fVec(float(0)));
+              const auto dominant1 = (output_fvec1 > fVec(float(-0.69314718055994530942))) &
+                  (output_fvec1 <= fVec(float(0)));
+              other_sum_fvec0 += fVec::blendv(grad_output_fvec0, fVec(float(0)), dominant0);
+              other_sum_fvec1 += fVec::blendv(grad_output_fvec1, fVec(float(0)), dominant1);
+              other_sum_fvec0.store(tmp_other_sum_data + d1);
+              other_sum_fvec1.store(tmp_other_sum_data + d1 + fVec::size());
+              auto dominant_count0 = fVec::loadu(tmp_dominant_count_data + d1);
+              auto dominant_count1 = fVec::loadu(tmp_dominant_count_data + d1 + fVec::size());
+              dominant_count0 += fVec::blendv(fVec(0), fVec(1), dominant0);
+              dominant_count1 += fVec::blendv(fVec(0), fVec(1), dominant1);
+              dominant_count0.store(tmp_dominant_count_data + d1);
+              dominant_count1.store(tmp_dominant_count_data + d1 + fVec::size());
 
               // cache the 'converted' float grad_output
               grad_output_fvec0.store(grad_output_buffer_ptr + d1);
@@ -572,6 +693,12 @@ _vec_log_softmax_backward(
               float grad_output_val = float(grad_output_ptr[d1]);
               tmp_sum_data[d1] += grad_output_val;
               grad_output_buffer_ptr[d1] = grad_output_val;
+              const float output_value = float(output_ptr[d1]);
+              if (!(output_value > float(-0.69314718055994530942) && output_value <= 0)) {
+                tmp_other_sum_data[d1] += grad_output_val;
+              } else {
+                tmp_dominant_count_data[d1] += float(1);
+              }
             }
           }
 
@@ -595,16 +722,21 @@ _vec_log_softmax_backward(
               fVec grad_output_fvec1 =
                   fVec::loadu(grad_output_buffer_ptr + d2 + fVec::size());
               fVec grad_input_fvec0 =
-                  grad_output_fvec0 - output_fvec0.exp() * sum_fvec0;
+                  log_softmax_backward_value<scalar_t>(grad_output_fvec0, output_fvec0,
+                      sum_fvec0, fVec::loadu(tmp_other_sum_data + d2),
+                      fVec::loadu(tmp_dominant_count_data + d2));
               fVec grad_input_fvec1 =
-                  grad_output_fvec1 - output_fvec1.exp() * sum_fvec1;
+                  log_softmax_backward_value<scalar_t>(grad_output_fvec1, output_fvec1,
+                      sum_fvec1, fVec::loadu(tmp_other_sum_data + d2 + fVec::size()),
+                      fVec::loadu(tmp_dominant_count_data + d2 + fVec::size()));
               Vec grad_input_vec =
                   vec::convert_from_float<scalar_t>(grad_input_fvec0, grad_input_fvec1);
               grad_input_vec.store(grad_input_ptr + d2);
             }
             for (; d2 < size; d2++) {
-              grad_input_ptr[d2] = grad_output_buffer_ptr[d2] -
-                  std::exp(float(output_ptr[d2])) * tmp_sum_data[d2];
+              grad_input_ptr[d2] = log_softmax_backward_scalar<scalar_t>(
+                  grad_output_buffer_ptr[d2], float(output_ptr[d2]), tmp_sum_data[d2],
+                  tmp_other_sum_data[d2], tmp_dominant_count_data[d2]);
             }
           }
         }
