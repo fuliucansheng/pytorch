@@ -34,6 +34,7 @@ from torchgen.api.types import (
     SymIntT,
     tensorGeometryT,
     tensorOptionsT,
+    tensorT,
     typeAndSizeT,
     VectorCType,
 )
@@ -785,6 +786,13 @@ def saved_variables(
         return f'strides_or_error({name}, "{name}")'
 
     REPLACEMENTS: list[tuple[str, dict[str, Any]]] = [
+        (
+            r"{}.clone\(\)",
+            {
+                "suffix": "_clone",
+                "nctype": lambda name: NamedCType(name, BaseCType(tensorT)),
+            },
+        ),
         # replace self.sym_sizes() with self_sym_sizes
         (
             r"{}.sym_sizes\(\)",

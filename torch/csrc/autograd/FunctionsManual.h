@@ -466,6 +466,15 @@ at::Tensor glu_double_backward_grad_output(
     const at::Tensor& grad,
     const at::Tensor& input,
     int64_t dim);
+at::Tensor sigmoid_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& input,
+    const at::Tensor& output);
+at::Tensor tanh_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& input,
+    const at::Tensor& output);
+
 at::Tensor infinitely_differentiable_silu_backward(
     const at::Tensor& grad_output,
     const at::Tensor& input);
