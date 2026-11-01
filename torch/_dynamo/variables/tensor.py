@@ -654,6 +654,23 @@ class TensorVariable(VariableTracker):
             ):
                 return VariableTracker.build(tx, example_value)
 
+        if not self.source:
+            from .object_protocol import generic_getattr
+
+            for variable in tx.output.input_source_to_var.values():
+                if (
+                    isinstance(variable, TensorVariable)
+                    and variable.source is not None
+                    and variable.source.subguards_allowed()
+                    and variable.as_proxy().node.meta.get("example_value") is fake_val
+                ):
+                    install_guard(
+                        variable.source.make_guard(
+                            functools.partial(GuardBuilder.HASATTR, attr=name)
+                        )
+                    )
+                    return generic_getattr(tx, variable, name)
+
         if not (self.source and self.source.subguards_allowed()):
             raise NotImplementedError
 
