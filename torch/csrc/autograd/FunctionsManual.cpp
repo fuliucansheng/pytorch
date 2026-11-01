@@ -6912,40 +6912,64 @@ Tensor stack_jvp(at::TensorList tensors, int64_t dim) {
   return out_fw_grad;
 }
 
+static std::pair<Tensor, Tensor> product_jvp_scan(
+    const Tensor& primal,
+    const Tensor& tangent,
+    int64_t dim,
+    const Tensor& groups = Tensor()) {
+  auto product = primal;
+  auto derivative = tangent;
+  const auto length = primal.size(dim);
+  for (int64_t offset = 1; offset < length; offset *= 2) {
+    auto shifted_product = at::cat(
+        {at::ones_like(product.slice(dim, 0, offset)),
+         product.slice(dim, 0, length - offset)},
+        dim);
+    auto shifted_derivative = at::cat(
+        {at::zeros_like(derivative.slice(dim, 0, offset)),
+         derivative.slice(dim, 0, length - offset)},
+        dim);
+    auto current_product = product;
+    auto current_derivative = derivative;
+    Tensor same_group;
+    if (groups.defined()) {
+      same_group = at::cat(
+          {at::zeros_like(
+               groups.slice(dim, 0, offset), groups.options().dtype(at::kBool)),
+           groups.slice(dim, offset, length)
+               .eq(groups.slice(dim, 0, length - offset))},
+          dim);
+      current_product = at::where(same_group, product, 1);
+      current_derivative = at::where(same_group, derivative, 0);
+      shifted_product = at::where(same_group, shifted_product, 1);
+      shifted_derivative = at::where(same_group, shifted_derivative, 0);
+    }
+    auto next_derivative = current_derivative * shifted_product +
+        current_product * shifted_derivative;
+    auto next_product = current_product * shifted_product;
+    if (groups.defined()) {
+      next_derivative = at::where(same_group, next_derivative, derivative);
+      next_product = at::where(same_group, next_product, product);
+    }
+    product = std::move(next_product);
+    derivative = std::move(next_derivative);
+  }
+  return {std::move(product), std::move(derivative)};
+}
+
 Tensor cumprod_jvp(
     const Tensor& self_t,
     const Tensor& self_p,
     const Tensor& result,
     int dim) {
-  // Generic formula when no 0. is involved
-  Tensor gradient = (self_t / self_p).cumsum(dim) * result;
-
-  // Note that we have to use at::where below as we are removing nans
-
-  if (self_p.dim() == 0) {
-    gradient.masked_fill_(self_p.eq(0), self_t);
-    return gradient;
-  } else {
-    // For input (a, 0, b, 0, c) with gradients (t0, t1, t2, t3, t4)
-    // The output of cumprod is (a, 0, 0, 0, 0)
-    // The gradient we want to compute is (t0, a*t1, a*b*t1, 0, 0)
-    // We do this by:
-    // Get a mask of all zeros (0, 1, 0, 1, 0)
-    auto mask_zeros = self_p.eq(0);
-    // Get a mask of the first zero for each dim (0, 1, 0, 0, 0)
-    auto mask_first_zero = mask_zeros.logical_and(mask_zeros.cumsum(dim).eq(1));
-
-    // Get the new grad value that should be used after any zero happened:
-    // (X, a*t1, a*b*t1, 0, 0) = cumprod((a, t1, b, 0, c))
-    auto new_grad = at::where(mask_first_zero, self_t, self_p).cumprod(dim);
-
-    // Get a mask of everything after the first zero: (0, 1, 1, 1, 1)
-    auto mask_after_first_zero = mask_first_zero.cumsum(dim);
-
-    // Do the final replacement
-    return at::where(
-        mask_after_first_zero.to(ScalarType::Bool), new_grad, gradient);
+  if (self_p.dim() == 0 || self_p.numel() == 0) {
+    return self_t.to(result.scalar_type());
   }
+  auto dtype = result.scalar_type();
+  auto work_dtype =
+      dtype == at::kHalf || dtype == at::kBFloat16 ? at::kFloat : dtype;
+  return product_jvp_scan(self_p.to(work_dtype), self_t.to(work_dtype), dim)
+      .second.to(dtype);
 }
 
 // Helper for {batch,layer,group}_norms below
@@ -7925,6 +7949,59 @@ Tensor scatter_reduce_jvp(
     //  auto mask = x == restore_reduced_dims(result, dim, keepdim);
     //  return at::where(mask, dx, 0.).sum(dim, keepdim) / mask.sum(dim,
     //  keepdim);
+  } else if (reduce == "prod") {
+    if (index.numel() == 0) {
+      return self_t;
+    }
+    if (self_p.dim() == 0) {
+      return include_self ? self_t * src_p + self_p * src_t : src_t;
+    }
+    dim = at::maybe_wrap_dim(dim, self_p.dim());
+    auto dtype = result.scalar_type();
+    auto work_dtype =
+        dtype == at::kHalf || dtype == at::kBFloat16 ? at::kFloat : dtype;
+    auto source = src_p.to(work_dtype);
+    auto source_tangent = src_t.to(work_dtype);
+    for (int64_t axis = 0; axis < index.dim(); ++axis) {
+      source = source.slice(axis, 0, index.size(axis));
+      source_tangent = source_tangent.slice(axis, 0, index.size(axis));
+    }
+    auto sorted = at::sort(index, dim);
+    auto ordered_index = std::get<0>(sorted);
+    auto permutation = std::get<1>(sorted);
+    auto scan = product_jvp_scan(
+        source.gather(dim, permutation),
+        source_tangent.gather(dim, permutation),
+        dim,
+        ordered_index);
+    const auto length = ordered_index.size(dim);
+    auto tails = at::cat(
+        {ordered_index.slice(dim, 0, length - 1)
+             .ne(ordered_index.slice(dim, 1, length)),
+         at::ones_like(
+             ordered_index.slice(dim, length - 1, length),
+             ordered_index.options().dtype(at::kBool))},
+        dim);
+    auto primal = self_p.to(work_dtype);
+    auto tangent = self_t.to(work_dtype);
+    auto present = at::zeros_like(primal, primal.options().dtype(at::kLong))
+                       .scatter_add(dim, ordered_index, tails.to(at::kLong))
+                       .ne(0);
+    auto group_tangent = at::zeros_like(primal).scatter_add(
+        dim, ordered_index, at::where(tails, scan.second, 0));
+    if (!include_self) {
+      return at::where(present, group_tangent, tangent).to(dtype);
+    }
+    auto group_product = at::zeros_like(primal).scatter_add(
+        dim, ordered_index, at::where(tails, scan.first, 0));
+    group_product = at::where(present, group_product, 1);
+    auto active_primal = at::where(present, primal, 0);
+    auto active_tangent = at::where(present, tangent, 0);
+    return at::where(
+               present,
+               active_tangent * group_product + active_primal * group_tangent,
+               tangent)
+        .to(dtype);
   } else if (reduce == "amin" || reduce == "amax") {
     auto gather_result = at::gather(result, dim, index);
     auto mask_self = self_p == result;
