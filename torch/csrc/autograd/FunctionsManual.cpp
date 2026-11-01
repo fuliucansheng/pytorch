@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <utility>
 
@@ -7621,6 +7622,196 @@ Tensor lu_factor_ex_jvp(
     dU.narrow(-1, 0, m).add_(dL);
     return dU;
   }
+}
+
+static bool can_use_log_softmax_composition(const Tensor& output) {
+  return output.device().is_cpu() && output.layout() == at::kStrided &&
+      !output.is_nested() && output.is_floating_point() &&
+      output.sym_numel() > 0;
+}
+
+static Tensor log_softmax_work_tensor(const Tensor& value) {
+  return at::isReducedFloatingType(value.scalar_type()) ? value.to(at::kFloat)
+                                                        : value;
+}
+
+static double log_softmax_tiny(const Tensor& value) {
+  return value.scalar_type() == at::kDouble ? std::numeric_limits<double>::min()
+                                            : std::numeric_limits<float>::min();
+}
+
+static std::tuple<Tensor, Tensor, Tensor> log_softmax_pivot(
+    const Tensor& output,
+    int64_t dim) {
+  auto pivot = output.argmax(dim, true);
+  auto mask = at::zeros_like(output, output.options().dtype(at::kBool))
+                  .scatter(dim, pivot, true);
+  return {pivot, mask, output.gather(dim, pivot)};
+}
+
+static Tensor log_softmax_scaled_exp_sum(
+    const Tensor& factor,
+    const Tensor& root,
+    int64_t dim) {
+  auto products = (factor * root) * root;
+  auto largest = root.amax({dim}, true);
+  auto divisor =
+      at::where((largest > 0).logical_and(largest.isfinite()), largest, 1);
+  auto ratio = root / divisor;
+  auto reduced = ((factor * ratio) * ratio).sum(dim, true);
+  auto finite = reduced.isfinite();
+  auto stable = (at::where(finite, reduced, 0) * largest) * largest;
+  auto tiny = products.abs().amax({dim}, true) < log_softmax_tiny(products);
+  return at::where(finite.logical_and(tiny), stable, products.sum(dim, true));
+}
+
+static Tensor log_softmax_centered_jvp(
+    const Tensor& tangent,
+    const Tensor& output,
+    int64_t dim,
+    bool normalized) {
+  auto work = log_softmax_work_tensor(output);
+  auto direction = tangent.to(work.scalar_type());
+  auto [pivot, mask, pivot_output] = log_softmax_pivot(work, dim);
+  auto pivot_direction = direction.gather(dim, pivot);
+  auto centered = direction - pivot_direction;
+  auto finite_centered = centered.isfinite().all(dim, true);
+  auto safe_centered = at::where(finite_centered, centered, 0);
+  auto root =
+      (at::where(mask, -std::numeric_limits<double>::infinity(), work) * 0.5)
+          .exp();
+  auto weighted = log_softmax_scaled_exp_sum(safe_centered, root, dim);
+  auto result = safe_centered - weighted;
+  if (!normalized) {
+    auto correction = pivot_direction * (-pivot_output.expm1());
+    correction =
+        correction - log_softmax_scaled_exp_sum(pivot_direction, root, dim);
+    result = result + correction;
+  }
+  auto original = direction - (direction * work.exp()).sum(dim, true);
+  auto safe = finite_centered.logical_and(result.isfinite());
+  return at::where(safe, result, original).to(output.scalar_type());
+}
+
+Tensor log_softmax_backward(
+    const Tensor& grad,
+    const Tensor& output,
+    int64_t dim,
+    ScalarType input_dtype) {
+  auto result = at::_log_softmax_backward_data(grad, output, dim, input_dtype);
+  if (!can_use_log_softmax_composition(output)) {
+    return result;
+  }
+  if (!areAnyTensorSubclassLike({grad, output}) && !isFwGradDefined(grad) &&
+      !isFwGradDefined(output) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::Functionalize) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchBatched) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerFrontMode) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerBackMode) &&
+      !c10::impl::tls_is_dispatch_key_included(c10::DispatchKey::Tracer)) {
+    at::NoGradGuard no_grad;
+    auto maximum = output.amax({dim}, true);
+    auto eligible =
+        (maximum >= -log_softmax_tiny(output)).logical_and(maximum <= 0);
+    if (!eligible.any().item<bool>()) {
+      return result;
+    }
+  }
+  auto work = log_softmax_work_tensor(output);
+  auto cotangent = grad.to(work.scalar_type());
+  auto [pivot, mask, pivot_output] = log_softmax_pivot(work, dim);
+  auto pivot_gradient = cotangent.gather(dim, pivot);
+  auto root =
+      (at::where(mask, -std::numeric_limits<double>::infinity(), work) * 0.5)
+          .exp();
+  auto tail = log_softmax_scaled_exp_sum(pivot_gradient, root, dim);
+  auto other = at::where(mask, 0, cotangent).sum(dim, true);
+  auto eligible =
+      (pivot_output >= -log_softmax_tiny(work)).logical_and(pivot_output <= 0);
+  eligible = eligible.logical_and(other.isfinite())
+                 .logical_and(cotangent.sum(dim, true).isfinite());
+  auto corrected =
+      tail - pivot_output.exp() * at::where(other.isfinite(), other, 0);
+  return at::where(
+             mask.logical_and(eligible),
+             corrected,
+             result.to(work.scalar_type()))
+      .to(input_dtype);
+}
+
+Tensor log_softmax_jvp(
+    const Tensor& self_p,
+    const Tensor& self_t,
+    const Tensor& output,
+    int64_t dim) {
+  if (!can_use_log_softmax_composition(output)) {
+    return self_t - logsumexp_jvp(self_p, self_t, {dim}, true);
+  }
+  return log_softmax_centered_jvp(self_t, output, dim, true);
+}
+
+Tensor log_softmax_backward_grad_output(
+    const Tensor& grad,
+    const Tensor& output,
+    int64_t dim) {
+  if (!can_use_log_softmax_composition(output)) {
+    auto direction = grad.to(output.scalar_type());
+    return direction - (direction * output.exp()).sum(dim, true);
+  }
+  return log_softmax_centered_jvp(grad, output, dim, false);
+}
+
+Tensor log_softmax_backward_output(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& output,
+    int64_t dim) {
+  auto original = (-grad_output.sum(dim, true) * output.exp() *
+                   grad.to(output.scalar_type()))
+                      .to(output.scalar_type());
+  if (!can_use_log_softmax_composition(output)) {
+    return original;
+  }
+  auto work = log_softmax_work_tensor(output);
+  auto incoming = grad.to(work.scalar_type());
+  auto scale = -grad_output.to(work.scalar_type()).sum(dim, true);
+  auto product = scale * incoming;
+  auto finite_product = product.isfinite();
+  auto root = (work * 0.5).exp();
+  auto finite_value = (at::where(finite_product, product, 0) * root) * root;
+  auto split_value = (scale * root) * (incoming * root);
+  auto result = at::where(finite_product, finite_value, split_value);
+  auto safe =
+      scale.isfinite().logical_and(incoming.isfinite()).logical_and(work <= 0);
+  return at::where(safe, result, original.to(work.scalar_type()))
+      .to(output.scalar_type());
+}
+
+Tensor log_softmax_backward_jvp(
+    const Tensor& grad_output_p,
+    const Tensor& grad_output_t,
+    const Tensor& output_p,
+    const Tensor& output_t,
+    int64_t dim,
+    ScalarType input_dtype) {
+  Tensor result;
+  if (grad_output_t.defined()) {
+    result = at::_log_softmax_backward_data(
+        grad_output_t, output_p, dim, input_dtype);
+  }
+  if (output_t.defined()) {
+    auto term =
+        log_softmax_backward_output(output_t, grad_output_p, output_p, dim)
+            .to(input_dtype);
+    result = result.defined() ? result + term : term;
+  }
+  return result.defined()
+      ? result
+      : at::zeros_like(output_p, output_p.options().dtype(input_dtype));
 }
 
 Tensor logsumexp_jvp(

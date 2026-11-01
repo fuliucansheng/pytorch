@@ -207,6 +207,32 @@ at::Tensor logsumexp_backward(
     at::Tensor result,
     at::IntArrayRef dim,
     bool keepdim);
+at::Tensor log_softmax_backward(
+    const at::Tensor& grad,
+    const at::Tensor& output,
+    int64_t dim,
+    at::ScalarType input_dtype);
+at::Tensor log_softmax_jvp(
+    const at::Tensor& self_p,
+    const at::Tensor& self_t,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_grad_output(
+    const at::Tensor& grad,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_output(
+    const at::Tensor& grad,
+    const at::Tensor& grad_output,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_jvp(
+    const at::Tensor& grad_output_p,
+    const at::Tensor& grad_output_t,
+    const at::Tensor& output_p,
+    const at::Tensor& output_t,
+    int64_t dim,
+    at::ScalarType input_dtype);
 at::Tensor logsumexp_jvp(
     const at::Tensor& self_p,
     const at::Tensor& self_t,
