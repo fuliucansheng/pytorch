@@ -95,9 +95,12 @@ def install_active_registry() -> None:
         registry.install()
 
 
-def register_current_stream(stream: object, source: Source) -> None:
+def register_current_stream(stream: object, source: Source | None) -> None:
     registry = _require_active_registry()
-    if registry.bytecode_constructors:
+    if (
+        registry.bytecode_constructors
+        and registry.weakrefs[CURRENT_STREAM_INDEX]() is not unused_current_stream
+    ):
         raise AssertionError(
             f"Current stream must be registered at index {CURRENT_STREAM_INDEX}"
         )
@@ -106,9 +109,16 @@ def register_current_stream(stream: object, source: Source) -> None:
         if registry.current_stream_unused:
             cg.load_import_from(__name__, "unused_current_stream")
         else:
+            if source is None:
+                raise AssertionError("Current stream used before realization")
             cg(source)
 
-    registry.register(weakref.ref(stream), construct)
+    if registry.bytecode_constructors:
+        registry.weakrefs[CURRENT_STREAM_INDEX] = weakref.ref(stream)
+        registry.bytecode_constructors[CURRENT_STREAM_INDEX] = construct
+        registry.install()
+    else:
+        registry.register(weakref.ref(stream), construct)
     registry.current_stream_unused = True
 
 

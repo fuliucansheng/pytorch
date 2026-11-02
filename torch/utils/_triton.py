@@ -106,41 +106,59 @@ def has_triton_cpu_backend() -> bool:
 
 
 @functools.cache
-def has_triton_experimental_host_tma() -> bool:
+def has_triton_experimental_host_tma_package() -> bool:
     if has_triton_package():
-        if _device_supports_tensor_descriptor():
-            try:
-                from triton.tools.experimental_descriptor import (  # noqa: F401
-                    create_1d_tma_descriptor,
-                    create_2d_tma_descriptor,
-                )
+        try:
+            from triton.tools import experimental_descriptor
 
-                try:
-                    from triton.tools.experimental_descriptor import enable_in_pytorch
+            if not all(
+                hasattr(experimental_descriptor, name)
+                for name in ("create_1d_tma_descriptor", "create_2d_tma_descriptor")
+            ):
+                return False
+            return True
+        except ImportError:
+            pass
 
-                    return enable_in_pytorch()
-                except ImportError:
-                    return True
-            except ImportError:
-                pass
+    return False
+
+
+@functools.cache
+def has_triton_experimental_host_tma() -> bool:
+    if (
+        has_triton_package()
+        and _device_supports_tensor_descriptor()
+        and has_triton_experimental_host_tma_package()
+    ):
+        try:
+            from triton.tools.experimental_descriptor import enable_in_pytorch
+
+            return enable_in_pytorch()
+        except ImportError:
+            return True
+    return False
+
+
+@functools.cache
+def has_triton_tensor_descriptor_host_tma_package() -> bool:
+    if has_triton_package():
+        try:
+            from triton.tools import tensor_descriptor
+
+            return hasattr(tensor_descriptor, "TensorDescriptor")
+        except ImportError:
+            pass
 
     return False
 
 
 @functools.cache
 def has_triton_tensor_descriptor_host_tma() -> bool:
-    if has_triton_package():
-        if _device_supports_tensor_descriptor():
-            try:
-                from triton.tools.tensor_descriptor import (  # noqa: F401
-                    TensorDescriptor,
-                )
-
-                return True
-            except ImportError:
-                pass
-
-    return False
+    return (
+        has_triton_package()
+        and _device_supports_tensor_descriptor()
+        and has_triton_tensor_descriptor_host_tma_package()
+    )
 
 
 @functools.cache
