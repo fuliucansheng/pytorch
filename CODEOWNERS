@@ -371,6 +371,9 @@
 /test/autograd/ @soulitzer
 /test/test_autograd.py @soulitzer
 /test/test_autograd_fallback.py @soulitzer
+/test/test_log_softmax_tail_derivatives.py @soulitzer
+/test/test_numerical_derivative_continuation.py @soulitzer
+/test/test_product_forward_ad.py @soulitzer
 #
 # [core_csrc_misc]
 # /torch/csrc/CudaIPCTypes.cpp
