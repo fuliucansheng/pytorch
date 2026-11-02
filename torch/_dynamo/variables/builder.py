@@ -1363,9 +1363,9 @@ class VariableBuilder:
     def _wrap(self, value: object) -> VariableTracker:
         # import here to avoid circular dependencies
         from torch.utils._triton import (
-            has_triton,
-            has_triton_experimental_host_tma,
-            has_triton_tensor_descriptor_host_tma,
+            has_triton_experimental_host_tma_package,
+            has_triton_package,
+            has_triton_tensor_descriptor_host_tma_package,
         )
 
         from ..decorators import (
@@ -1375,7 +1375,7 @@ class VariableBuilder:
         )
 
         # Triton runtime types are shared across backends, including CPU.
-        if has_triton(include_cpu=True):
+        if has_triton_package():
             from triton.runtime.autotuner import Autotuner
             from triton.runtime.jit import JITFunction
         else:
@@ -1401,15 +1401,15 @@ class VariableBuilder:
         def set_allocator() -> None:
             pass
 
-        if has_triton_experimental_host_tma():
+        if has_triton_experimental_host_tma_package():
             from triton.tools.experimental_descriptor import (
                 create_1d_tma_descriptor,
                 create_2d_tma_descriptor,
             )
-        if has_triton_tensor_descriptor_host_tma():
+        if has_triton_tensor_descriptor_host_tma_package():
             from triton.tools.tensor_descriptor import TensorDescriptor
         # The allocator hook is shared across Triton backends, including CPU.
-        if has_triton(include_cpu=True):
+        if has_triton_package():
             import triton as triton_mod
 
             if hasattr(triton_mod, "set_allocator"):

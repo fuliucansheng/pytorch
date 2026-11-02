@@ -16,6 +16,7 @@ from ..graph_bytecode_inputs import (
     mark_current_stream_used,
     register_current_stream,
     register_graph_created_object,
+    unused_current_stream,
 )
 from ..source import CurrentStreamSource
 from .base import GetSet, Method, readonly_setter, VariableTracker
@@ -272,40 +273,44 @@ class SymbolicStreamState:
     """Track the currently entered stream if any"""
 
     def __init__(self) -> None:
-        from ..source import CurrentStreamSource
-
-        cur_stack: list[StreamVariable] = []
-        if torch.accelerator.is_available():
-            from torch.fx.experimental.proxy_tensor import _coor_device_index_is_current
-
-            stream = torch.accelerator.current_stream()
-            device = stream.device
-            if _coor_device_index_is_current(device):
-                # Reconstruct the stream relative to each rank's current device.
-                device = torch.device(device.type)
-            source = CurrentStreamSource(device)
-            # Register the current stream so it gets index 0 (each OutputGraph
-            # starts with an empty registry).  The inductor wrapper updates this
-            # entry at runtime so cudagraph capture uses the capture stream
-            # instead of this stale trace-time stream.
-            register_current_stream(stream, source)
-            stream_var = LazyVariableTracker.create(stream, source=source)
-            # Set user_object_index as an instance attribute so accessing it
-            # does NOT trigger LazyVariableTracker realization.
-            stream_var.user_object_index = CURRENT_STREAM_INDEX  # type: ignore[union-attr]
-            cur_stack = [stream_var]  # type: ignore[list-item]
-
-        self.cur_stream_stack: collections.deque[StreamVariable] = collections.deque(
-            cur_stack
+        self.cur_stream_stack: collections.deque[StreamVariable] = collections.deque()
+        accelerator = torch.accelerator.current_accelerator()
+        is_initialized = (
+            getattr(torch.get_device_module(accelerator), "is_initialized", None)
+            if accelerator is not None
+            else None
         )
+        if torch.accelerator.is_available() and (
+            is_initialized is None or is_initialized()
+        ):
+            self._initialize_current_stream()
+        elif accelerator is not None:
+            register_current_stream(unused_current_stream, None)
+
+    def _initialize_current_stream(self) -> None:
+        from torch.fx.experimental.proxy_tensor import _coor_device_index_is_current
+
+        stream = torch.accelerator.current_stream()
+        device = stream.device
+        if _coor_device_index_is_current(device):
+            device = torch.device(device.type)
+        source = CurrentStreamSource(device)
+        register_current_stream(stream, source)
+        stream_var = LazyVariableTracker.create(stream, source=source)
+        stream_var.user_object_index = CURRENT_STREAM_INDEX
+        self.cur_stream_stack.append(stream_var)
 
     def enter_stream(self, stream: "StreamVariable") -> None:
+        if not self.cur_stream_stack:
+            self._initialize_current_stream()
         self.cur_stream_stack.append(stream)
 
     def exit_stream(self) -> None:
         self.cur_stream_stack.pop()
 
     def cur_stream(self, device: torch.device | None = None) -> "StreamVariable":
+        if not self.cur_stream_stack:
+            self._initialize_current_stream()
         mark_current_stream_used()
         if device is not None:
             for stream in reversed(self.cur_stream_stack):
@@ -330,6 +335,8 @@ class SymbolicStreamState:
 
     def cur_stream_id(self) -> int:
         """Get a Python object id for the current stream without realizing lazy variables."""
+        if not self.cur_stream_stack:
+            self._initialize_current_stream()
         stream = self.cur_stream_stack[-1]
         if isinstance(stream, LazyVariableTracker) and not stream.is_realized():
             return id(stream.peek_value())

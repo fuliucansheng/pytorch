@@ -1,6 +1,9 @@
 # Owner(s): ["module: cuda"]
 
+import os
+import subprocess
 import sys
+import textwrap
 import unittest
 
 import torch
@@ -22,6 +25,202 @@ from torch.testing._internal.common_utils import (
 if not TEST_CUDA:
     print("CUDA not available, skipping tests", file=sys.stderr)
     TestCase = NoTest
+
+
+@unittest.skipIf(not TEST_CUDA, "CUDA not available")
+class TestCudaDynamoInitialization(TestCase):
+    def _run_fresh_python(self, source):
+        child_environment = os.environ.copy()
+        torch_package_root = os.path.dirname(os.path.dirname(torch.__file__))
+        child_python_path = [torch_package_root]
+        inherited_python_path = child_environment.get("PYTHONPATH")
+        if inherited_python_path:
+            child_python_path.append(inherited_python_path)
+        child_environment["PYTHONPATH"] = os.pathsep.join(child_python_path)
+        completed_process = subprocess.run(
+            [
+                sys.executable,
+                "-s",
+                "-B",
+                "-c",
+                source,
+                torch.__file__,
+                torch._C.__file__,
+            ],
+            capture_output=True,
+            env=child_environment,
+            text=True,
+        )
+        self.assertEqual(
+            completed_process.returncode,
+            0,
+            msg=(
+                f"child stdout:\n{completed_process.stdout}\n"
+                f"child stderr:\n{completed_process.stderr}"
+            ),
+        )
+        print(completed_process.stdout, end="")
+
+    def test_cpu_cond_does_not_initialize_cuda(self):
+        source = textwrap.dedent(
+            """
+            import os
+            import sys
+
+            import torch
+
+            assert os.path.realpath(torch.__file__) == os.path.realpath(sys.argv[1])
+            assert os.path.realpath(torch._C.__file__) == os.path.realpath(sys.argv[2])
+            assert not torch.cuda.is_initialized()
+            for device_index in range(torch.cuda.device_count()):
+                assert not torch._C._cuda_hasPrimaryContext(device_index)
+
+            def true_branch(operand):
+                return operand + 1
+
+            def false_branch(operand):
+                return operand.clone()
+
+            def conditional(operand, predicate):
+                return torch.cond(
+                    predicate, true_branch, false_branch, (operand,)
+                )
+
+            input_values = torch.arange(
+                1, 5, dtype=torch.float32, requires_grad=True
+            )
+            predicate = torch.tensor(True)
+            actual_output = conditional(input_values, predicate)
+            torch.testing.assert_close(actual_output, input_values + 1)
+            assert not torch.cuda.is_initialized()
+            for device_index in range(torch.cuda.device_count()):
+                assert not torch._C._cuda_hasPrimaryContext(device_index)
+            print(f"CHILD_TORCH={torch.__file__}")
+            print(f"CHILD_NATIVE={torch._C.__file__}")
+            """
+        )
+        self._run_fresh_python(source)
+
+    def test_first_cpu_cond_aot_eager_does_not_initialize_cuda(self):
+        source = textwrap.dedent(
+            """
+            import os
+            import sys
+
+            import torch
+            from torch._dynamo.testing import CompileCounterWithBackend
+
+            assert os.path.realpath(torch.__file__) == os.path.realpath(sys.argv[1])
+            assert os.path.realpath(torch._C.__file__) == os.path.realpath(sys.argv[2])
+            assert not torch.cuda.is_initialized()
+            for device_index in range(torch.cuda.device_count()):
+                assert not torch._C._cuda_hasPrimaryContext(device_index)
+
+            def true_branch(operand):
+                return operand + 1
+
+            def false_branch(operand):
+                return operand.clone()
+
+            def conditional(operand, predicate):
+                return torch.cond(
+                    predicate, true_branch, false_branch, (operand,)
+                )
+
+            oracle_input = torch.arange(
+                1, 5, dtype=torch.float32, requires_grad=True
+            )
+            expected_output = true_branch(oracle_input)
+            expected_output.sum().backward()
+            expected_gradient = oracle_input.grad.clone()
+            assert not torch.cuda.is_initialized()
+
+            backend_counter = CompileCounterWithBackend("aot_eager")
+            compiled_input = torch.arange(
+                1, 5, dtype=torch.float32, requires_grad=True
+            )
+            predicate = torch.tensor(True)
+            compiled_conditional = torch.compile(
+                conditional, backend=backend_counter, fullgraph=True
+            )
+            actual_output = compiled_conditional(compiled_input, predicate)
+            actual_output.sum().backward()
+
+            assert backend_counter.frame_count == 1
+            torch.testing.assert_close(actual_output, expected_output)
+            torch.testing.assert_close(compiled_input.grad, expected_gradient)
+            assert not torch.cuda.is_initialized()
+            for device_index in range(torch.cuda.device_count()):
+                assert not torch._C._cuda_hasPrimaryContext(device_index)
+            print(f"CHILD_TORCH={torch.__file__}")
+            print(f"CHILD_NATIVE={torch._C.__file__}")
+            """
+        )
+        self._run_fresh_python(source)
+
+    def test_dynamo_streams_after_cuda_initialization(self):
+        source = textwrap.dedent(
+            """
+            import os
+            import sys
+
+            import torch
+            from torch._dynamo.testing import CompileCounterWithBackend
+
+            assert os.path.realpath(torch.__file__) == os.path.realpath(sys.argv[1])
+            assert os.path.realpath(torch._C.__file__) == os.path.realpath(sys.argv[2])
+            assert not torch.cuda.is_initialized()
+
+            def current_stream_computation(host_values):
+                active_stream = torch.cuda.current_stream()
+                with torch.cuda.stream(active_stream):
+                    return host_values.to("cuda") + 1
+
+            def new_stream_computation(host_values):
+                created_stream = torch.cuda.Stream()
+                with torch.cuda.stream(created_stream):
+                    return host_values.to("cuda") + 1
+
+            initial_values = torch.arange(
+                4, dtype=torch.float32, device="cuda"
+            )
+            assert torch.cuda.is_initialized()
+            default_stream = torch.cuda.current_stream()
+            explicit_stream = torch.cuda.Stream()
+            explicit_stream.wait_stream(default_stream)
+            with torch.cuda.stream(explicit_stream):
+                assert torch.cuda.current_stream() == explicit_stream
+                explicit_output = initial_values + 1
+            explicit_stream.synchronize()
+            expected_output = torch.arange(4, dtype=torch.float32) + 1
+            torch.testing.assert_close(explicit_output.cpu(), expected_output)
+            assert explicit_output.dtype == torch.float32
+            assert torch.cuda.current_stream() == default_stream
+
+            host_values = torch.arange(4, dtype=torch.float32)
+            for stream_computation in (
+                current_stream_computation,
+                new_stream_computation,
+            ):
+                backend_counter = CompileCounterWithBackend("aot_eager")
+                compiled_computation = torch.compile(
+                    stream_computation,
+                    backend=backend_counter,
+                    fullgraph=True,
+                )
+                actual_output = compiled_computation(host_values)
+                torch.cuda.synchronize()
+                torch.testing.assert_close(
+                    actual_output.cpu(), host_values + 1
+                )
+                assert actual_output.dtype == torch.float32
+                assert backend_counter.frame_count == 1
+                assert torch.cuda.current_stream() == default_stream
+            print(f"CHILD_TORCH={torch.__file__}")
+            print(f"CHILD_NATIVE={torch._C.__file__}")
+            """
+        )
+        self._run_fresh_python(source)
 
 
 @torch.testing._internal.common_utils.markDynamoStrictTest
