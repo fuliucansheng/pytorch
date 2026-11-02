@@ -856,6 +856,9 @@ def _fused_adam(
 
     beta1 = _to_scalar(beta1)
     beta2 = _to_scalar(beta2)
+    device_betas = (isinstance(beta1, Tensor) and beta1.is_cuda) or (
+        isinstance(beta2, Tensor) and beta2.is_cuda
+    )
 
     grad_scale_dict: DeviceDict = (
         {grad_scale.device: grad_scale} if grad_scale is not None else {}
@@ -903,6 +906,36 @@ def _fused_adam(
             lr = lr_dict[device]
         torch._foreach_add_(device_state_steps, 1)
         func = torch._fused_adam_ if not decoupled_weight_decay else torch._fused_adamw_
+        device_beta1 = beta1
+        device_beta2 = beta2
+        if device_betas and device.type == "cuda":
+            device_beta1 = (
+                beta1.to(device=device, non_blocking=True)
+                if isinstance(beta1, Tensor)
+                else torch.scalar_tensor(beta1, device=device, dtype=torch.float64)
+            )
+            device_beta2 = (
+                beta2.to(device=device, non_blocking=True)
+                if isinstance(beta2, Tensor)
+                else torch.scalar_tensor(beta2, device=device, dtype=torch.float64)
+            )
+            operator = (
+                torch.ops.aten._fused_adam_
+                if not decoupled_weight_decay
+                else torch.ops.aten._fused_adamw_
+            )
+            func = (
+                operator.tensor_lr_betas
+                if isinstance(lr, Tensor)
+                else operator.tensor_betas
+            )
+        elif isinstance(beta1, Tensor) or isinstance(beta2, Tensor):
+            operator = (
+                torch.ops.aten._fused_adam_
+                if not decoupled_weight_decay
+                else torch.ops.aten._fused_adamw_
+            )
+            func = operator.tensor_lr if isinstance(lr, Tensor) else operator.default
         # pyrefly: ignore [no-matching-overload]
         func(
             device_params,
@@ -913,8 +946,8 @@ def _fused_adam(
             device_state_steps,
             amsgrad=amsgrad,
             lr=lr,  # type: ignore[arg-type]
-            beta1=beta1,
-            beta2=beta2,
+            beta1=device_beta1,
+            beta2=device_beta2,
             weight_decay=weight_decay,
             eps=eps,
             maximize=maximize,

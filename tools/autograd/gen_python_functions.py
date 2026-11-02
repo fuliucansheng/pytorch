@@ -201,6 +201,13 @@ SKIP_PYTHON_BINDINGS_SIGNATURES = [
 
 @with_native_function
 def should_generate_py_binding(f: NativeFunction) -> bool:
+    if str(f.func.name) in (
+        "_fused_adam_.tensor_betas",
+        "_fused_adam_.tensor_lr_betas",
+        "_fused_adamw_.tensor_betas",
+        "_fused_adamw_.tensor_lr_betas",
+    ):
+        return False
     # NativeFunctions that are entirely code-generated should not get python bindings
     # because these codegen implementations are often inefficient. A handful of
     # view_copy style ops were exposed accidentally when they were handwritten and now
