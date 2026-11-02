@@ -5,6 +5,7 @@
 #include <ATen/core/Tensor.h>
 #include <ATen/Dispatch.h>
 #include <ATen/OpMathType.h>
+#include <ATen/Parallel.h>
 #include <ATen/cpu/vec/vec.h>
 #include <ATen/cpu/vec/functional.h>
 #include <ATen/native/ReduceOps.h>
@@ -572,7 +573,117 @@ REGISTER_DISPATCH(argmax_stub, &argmax_kernel_impl)
 REGISTER_DISPATCH(argmin_stub, &argmin_kernel_impl)
 REGISTER_DISPATCH(xor_sum_stub, &xor_sum_kernel_impl)
 
+namespace {
+
+void product_scan_jvp_cpu_kernel(
+    const Tensor& primal,
+    const Tensor& tangent,
+    const Tensor& groups,
+    int64_t length,
+    Tensor& product,
+    Tensor& derivative) {
+  AT_DISPATCH_FLOATING_AND_COMPLEX_TYPES_AND2(
+      kHalf, kBFloat16, primal.scalar_type(), "product_scan_jvp_cpu", [&]() {
+        using opmath_t = at::opmath_type<scalar_t>;
+        const auto* input = primal.const_data_ptr<scalar_t>();
+        const auto* direction = tangent.const_data_ptr<scalar_t>();
+        const auto* group_ids = groups.defined() ? groups.const_data_ptr<int64_t>() : nullptr;
+        auto* products = product.mutable_data_ptr<scalar_t>();
+        auto* derivatives = derivative.mutable_data_ptr<scalar_t>();
+        at::parallel_for(0, primal.numel() / length, 1, [&](int64_t begin, int64_t end) {
+          for (auto row = begin; row < end; ++row) {
+            const auto start = row * length;
+            opmath_t previous_product = 1;
+            opmath_t previous_derivative = 0;
+            for (const auto column : c10::irange(length)) {
+              const auto index = start + column;
+              const auto value = opmath_t(input[index]);
+              const auto variation = opmath_t(direction[index]);
+              if (column == 0 || (group_ids && group_ids[index] != group_ids[index - 1])) {
+                previous_product = value;
+                previous_derivative = variation;
+              } else {
+                previous_derivative = previous_derivative * value + previous_product * variation;
+                previous_product = previous_product * value;
+              }
+              products[index] = static_cast<scalar_t>(previous_product);
+              derivatives[index] = static_cast<scalar_t>(previous_derivative);
+            }
+          }
+        });
+      });
+}
+
+void product_scan_jvp_backward_cpu_kernel(
+    const Tensor& grad_product,
+    const Tensor& grad_derivative,
+    const Tensor& primal,
+    const Tensor& tangent,
+    const Tensor& product,
+    const Tensor& derivative,
+    const Tensor& groups,
+    int64_t length,
+    Tensor& grad_primal,
+    Tensor& grad_tangent) {
+  AT_DISPATCH_FLOATING_AND_COMPLEX_TYPES_AND2(
+      kHalf, kBFloat16, primal.scalar_type(), "product_scan_jvp_backward_cpu", [&]() {
+        using opmath_t = at::opmath_type<scalar_t>;
+        const auto conjugate = [](auto value) {
+          using value_t = decltype(value);
+          if constexpr (c10::is_complex<value_t>::value) {
+            return value_t(value.real(), -value.imag());
+          } else {
+            return value;
+          }
+        };
+        const auto* input = primal.const_data_ptr<scalar_t>();
+        const auto* direction = tangent.const_data_ptr<scalar_t>();
+        const auto* products = product.const_data_ptr<scalar_t>();
+        const auto* derivatives = derivative.const_data_ptr<scalar_t>();
+        const auto* product_cotangent = grad_product.const_data_ptr<scalar_t>();
+        const auto* derivative_cotangent = grad_derivative.const_data_ptr<scalar_t>();
+        const auto* group_ids = groups.defined() ? groups.const_data_ptr<int64_t>() : nullptr;
+        auto* input_gradient = grad_primal.mutable_data_ptr<scalar_t>();
+        auto* direction_gradient = grad_tangent.mutable_data_ptr<scalar_t>();
+        at::parallel_for(0, primal.numel() / length, 1, [&](int64_t begin, int64_t end) {
+          for (auto row = begin; row < end; ++row) {
+            const auto start = row * length;
+            opmath_t product_adjoint = 0;
+            opmath_t derivative_adjoint = 0;
+            for (int64_t column = length - 1; column >= 0; --column) {
+              const auto index = start + column;
+              if (column == length - 1 || (group_ids && group_ids[index] != group_ids[index + 1])) {
+                product_adjoint = opmath_t(product_cotangent[index]);
+                derivative_adjoint = opmath_t(derivative_cotangent[index]);
+              } else {
+                product_adjoint = product_adjoint + opmath_t(product_cotangent[index]);
+                derivative_adjoint = derivative_adjoint + opmath_t(derivative_cotangent[index]);
+              }
+              if (column == 0 || (group_ids && group_ids[index] != group_ids[index - 1])) {
+                input_gradient[index] = static_cast<scalar_t>(product_adjoint);
+                direction_gradient[index] = static_cast<scalar_t>(derivative_adjoint);
+              } else {
+                const auto previous_product = conjugate(opmath_t(products[index - 1]));
+                const auto previous_derivative = conjugate(opmath_t(derivatives[index - 1]));
+                input_gradient[index] = static_cast<scalar_t>(
+                    product_adjoint * previous_product + derivative_adjoint * previous_derivative);
+                direction_gradient[index] = static_cast<scalar_t>(derivative_adjoint * previous_product);
+                const auto value = conjugate(opmath_t(input[index]));
+                const auto variation = conjugate(opmath_t(direction[index]));
+                product_adjoint = product_adjoint * value + derivative_adjoint * variation;
+                derivative_adjoint = derivative_adjoint * value;
+              }
+            }
+          }
+        });
+      });
+}
+
+}
+
 REGISTER_DISPATCH(cumprod_stub, &cumprod_cpu_kernel)
+REGISTER_DISPATCH(product_scan_jvp_stub, &product_scan_jvp_cpu_kernel)
+REGISTER_DISPATCH(product_scan_jvp_backward_stub, &product_scan_jvp_backward_cpu_kernel)
 REGISTER_DISPATCH(cumsum_stub, &cumsum_cpu_kernel)
 REGISTER_DISPATCH(logcumsumexp_stub, &logcumsumexp_cpu_kernel)
 

@@ -5280,6 +5280,30 @@
   autogen: celu.out
   tags: pointwise
 
+- func: _product_scan_jvp(Tensor primal, Tensor tangent, int dim, Tensor? groups=None) -> (Tensor product, Tensor derivative)
+  dispatch:
+    CPU: product_scan_jvp_cpu
+    CompositeExplicitAutograd: product_scan_jvp_math
+
+- func: _sigmoid_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  dispatch:
+    CPU: stable_sigmoid_backward_cpu
+    CompositeExplicitAutograd: stable_sigmoid_backward_math
+  tags: pointwise
+
+- func: _tanh_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  dispatch:
+    CPU: stable_tanh_backward_cpu
+    CompositeExplicitAutograd: stable_tanh_backward_math
+  tags: pointwise
+
+- func: _silu_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  dispatch:
+    CPU: stable_silu_backward_cpu
+    NestedTensorCPU, NestedTensorCUDA: stable_silu_backward_nested
+    CompositeExplicitAutograd: stable_silu_backward_math
+  tags: pointwise
+
 - func: silu(Tensor self) -> Tensor
   structured_delegate: silu.out
   python_module: nn

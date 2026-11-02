@@ -523,6 +523,8 @@ DEFINE_DISPATCH(softmax_kernel);
 DEFINE_DISPATCH(log_softmax_kernel);
 DEFINE_DISPATCH(softmax_backward_kernel);
 DEFINE_DISPATCH(log_softmax_backward_kernel);
+DEFINE_DISPATCH(log_softmax_double_backward_stub);
+DEFINE_DISPATCH(log_softmax_jvp_lastdim_stub);
 
 Tensor masked_softmax_cpu(const Tensor& input_, const Tensor& mask_, const std::optional<int64_t> dim_, const std::optional<int64_t> mask_type_) {
 

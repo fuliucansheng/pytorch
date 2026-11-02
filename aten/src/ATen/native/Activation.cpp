@@ -71,6 +71,7 @@
 #include <ATen/ops/rrelu_with_noise_native.h>
 #include <ATen/ops/selu_native.h>
 #include <ATen/ops/sigmoid.h>
+#include <ATen/ops/where.h>
 #include <ATen/ops/silu_backward_native.h>
 #include <ATen/ops/silu_native.h>
 #include <ATen/ops/softplus.h>
@@ -256,6 +257,13 @@ DEFINE_DISPATCH(softplus_stub);
 DEFINE_DISPATCH(softplus_backward_stub);
 DEFINE_DISPATCH(log_sigmoid_cpu_stub);
 DEFINE_DISPATCH(log_sigmoid_backward_stub);
+DEFINE_DISPATCH(sigmoid_backward_from_input_stub);
+DEFINE_DISPATCH(tanh_backward_from_input_stub);
+DEFINE_DISPATCH(silu_backward_from_input_stub);
+DEFINE_DISPATCH(sigmoid_double_backward_from_input_stub);
+DEFINE_DISPATCH(tanh_double_backward_from_input_stub);
+DEFINE_DISPATCH(silu_double_backward_from_input_stub);
+DEFINE_DISPATCH(log_sigmoid_double_backward_from_input_stub);
 DEFINE_DISPATCH(threshold_stub);
 DEFINE_DISPATCH(hardtanh_backward_stub);
 DEFINE_DISPATCH(hardsigmoid_stub);
@@ -552,6 +560,79 @@ Tensor & celu_(Tensor & self, const Scalar& alpha) {
       "ZeroDivisionError: alpha cannot be 0 for CELU");
   double inv_alpha = 1. / alpha.to<double>();
   return at::elu_(self, alpha, Scalar(1.0), Scalar(inv_alpha));
+}
+
+Tensor stable_sigmoid_backward_cpu(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  if (grad_output._is_zerotensor() || input._is_zerotensor()) {
+    return stable_sigmoid_backward_math(grad_output, input);
+  }
+  Tensor result;
+  auto iterator = TensorIterator::binary_op(result, grad_output, input);
+  sigmoid_backward_from_input_stub(kCPU, iterator);
+  return iterator.output();
+}
+
+Tensor stable_tanh_backward_cpu(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  if (grad_output._is_zerotensor() || input._is_zerotensor()) {
+    return stable_tanh_backward_math(grad_output, input);
+  }
+  Tensor result;
+  auto iterator = TensorIterator::binary_op(result, grad_output, input);
+  tanh_backward_from_input_stub(kCPU, iterator);
+  return iterator.output();
+}
+
+Tensor stable_silu_backward_cpu(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  if (grad_output._is_zerotensor() || input._is_zerotensor()) {
+    return stable_silu_backward_math(grad_output, input);
+  }
+  Tensor result;
+  auto iterator = TensorIterator::binary_op(result, grad_output, input);
+  silu_backward_from_input_stub(kCPU, iterator);
+  return iterator.output();
+}
+
+static Tensor stable_activation_work(const Tensor& input) {
+  return isReducedFloatingType(input.scalar_type()) ? input.to(kFloat) : input;
+}
+
+Tensor stable_sigmoid_backward_math(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  const auto work = stable_activation_work(input);
+  const auto exponential = (at::where(work < 0, work, -work) * 0.5).exp();
+  const auto root = exponential / (1 + exponential.square());
+  return ((grad_output * root) * root).to(input.scalar_type());
+}
+
+Tensor stable_tanh_backward_math(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  const auto work = stable_activation_work(input);
+  const auto exponential = at::where(work < 0, work, -work).exp();
+  const auto root = 2 * exponential / (1 + exponential.square());
+  return ((grad_output * root) * root).to(input.scalar_type());
+}
+
+Tensor stable_silu_backward_math(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  const auto work = stable_activation_work(input);
+  const auto exponential = (at::where(work < 0, work, -work) * 0.5).exp();
+  const auto denominator = 1 + exponential.square();
+  const auto root = exponential / denominator;
+  const auto scaled_gradient = grad_output * root;
+  return at::where(
+             work < 0,
+             scaled_gradient * (exponential + work * root),
+             grad_output / denominator + scaled_gradient * (work * root))
+      .to(input.scalar_type());
 }
 
 Tensor math_silu_backward(

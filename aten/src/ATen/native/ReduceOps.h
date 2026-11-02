@@ -45,6 +45,13 @@ using structured_cum_fn = void (*)(const Tensor&, const Tensor&, int64_t);
 using cum_fn = void (*)(Tensor&, const Tensor&, int64_t);
 DECLARE_DISPATCH(structured_cum_fn, cumsum_stub)
 DECLARE_DISPATCH(structured_cum_fn, cumprod_stub)
+using product_scan_jvp_fn = void (*)(
+    const Tensor&, const Tensor&, const Tensor&, int64_t, Tensor&, Tensor&);
+using product_scan_jvp_backward_fn = void (*)(
+    const Tensor&, const Tensor&, const Tensor&, const Tensor&,
+    const Tensor&, const Tensor&, const Tensor&, int64_t, Tensor&, Tensor&);
+DECLARE_DISPATCH(product_scan_jvp_fn, product_scan_jvp_stub)
+DECLARE_DISPATCH(product_scan_jvp_backward_fn, product_scan_jvp_backward_stub)
 DECLARE_DISPATCH(cum_fn, logcumsumexp_stub)
 
 DECLARE_DISPATCH(void (*)(const Tensor&, int64_t, bool, Tensor&, Tensor&), aminmax_stub)

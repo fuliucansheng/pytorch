@@ -12,9 +12,14 @@ namespace at {
 struct TensorIterator;
 struct TensorIteratorBase;
 class TensorBase;
+class Tensor;
 }
 
 namespace at::native {
+
+Tensor stable_sigmoid_backward_math(const Tensor& grad_output, const Tensor& input);
+Tensor stable_tanh_backward_math(const Tensor& grad_output, const Tensor& input);
+Tensor stable_silu_backward_math(const Tensor& grad_output, const Tensor& input);
 
 using structured_activation_fn = void (*)(TensorIteratorBase&);
 using structured_activation_backward_fn = void (*)(TensorIteratorBase&);
@@ -47,6 +52,13 @@ DECLARE_DISPATCH(softplus_fn, softplus_stub)
 DECLARE_DISPATCH(softplus_backward_fn, softplus_backward_stub)
 DECLARE_DISPATCH(log_sigmoid_cpu_fn, log_sigmoid_cpu_stub)
 DECLARE_DISPATCH(activation_backward_fn, log_sigmoid_backward_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, sigmoid_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, tanh_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, silu_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, sigmoid_double_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, tanh_double_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, silu_double_backward_from_input_stub)
+DECLARE_DISPATCH(structured_activation_backward_fn, log_sigmoid_double_backward_from_input_stub)
 DECLARE_DISPATCH(threshold_fn, threshold_stub)
 DECLARE_DISPATCH(gelu_fn, GeluKernel)
 DECLARE_DISPATCH(gelu_backward_fn, GeluBackwardKernel)

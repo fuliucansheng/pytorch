@@ -33,6 +33,11 @@ struct Max {
 // The gradient of log_softmax: grad_output - exp(output) * grad_sum.
 template <typename acc_t>
 __device__ __forceinline__ acc_t log_softmax_backward_element(acc_t grad_output, acc_t output, acc_t grad_sum) {
+  if (std::isfinite(grad_sum) && std::isfinite(output) &&
+      output < std::log(std::numeric_limits<acc_t>::min())) {
+    const auto root = std::exp(output * acc_t(0.5));
+    return grad_output - (grad_sum * root) * root;
+  }
   return grad_output - std::exp(output) * grad_sum;
 }
 

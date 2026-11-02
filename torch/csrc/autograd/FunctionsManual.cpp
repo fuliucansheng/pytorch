@@ -8,6 +8,7 @@
 #include <ATen/Dispatch.h>
 #include <ATen/OpMathType.h>
 #include <ATen/SparseCsrTensorUtils.h>
+#include <ATen/TensorIterator.h>
 #include <ATen/TensorSubclassLikeUtils.h>
 #include <ATen/WrapDimUtils.h>
 #include <ATen/WrapDimUtilsMulti.h>
@@ -16,6 +17,8 @@
 #include <ATen/native/Activation.h>
 #include <ATen/native/GridSamplerUtils.h>
 #include <ATen/native/LinearAlgebraUtils.h>
+#include <ATen/native/ReduceOps.h>
+#include <ATen/native/cpu/SoftmaxKernel.h>
 #include <ATen/native/nested/NestedTensorUtils.h>
 #include <c10/core/TensorOptions.h>
 #include <c10/util/OptionalArrayRef.h>
@@ -23,6 +26,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <numeric>
 #include <utility>
 
@@ -2577,11 +2581,215 @@ Tensor glu_double_backward_grad_output(
       tmp.narrow(dim, sizes[dim], sizes[dim]);
 }
 
+static std::tuple<Tensor, Tensor, Tensor> sigmoid_derivative_factors(
+    const Tensor& input) {
+  const auto work = at::isReducedFloatingType(input.scalar_type())
+      ? input.to(at::kFloat)
+      : input;
+  const auto negative_magnitude = at::where(work < 0, work, -work);
+  const auto half_exponential = (negative_magnitude * 0.5).exp();
+  const auto denominator = 1 + half_exponential.square();
+  const auto root = half_exponential / denominator;
+  return {root, half_exponential, denominator};
+}
+
+static bool can_use_stable_activation_backward_cpu(
+    const Tensor& grad,
+    const Tensor& input) {
+  return !at::GradMode::is_enabled() && input.device().is_cpu() &&
+      grad.device().is_cpu() && input.layout() == at::kStrided &&
+      grad.layout() == at::kStrided && !input.is_nested() &&
+      !grad.is_nested() && !input._is_zerotensor() && !grad._is_zerotensor() &&
+      input.is_floating_point() && input.scalar_type() == grad.scalar_type() &&
+      !input.is_neg() && !grad.is_neg() && !input.is_conj() &&
+      !grad.is_conj() &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::Functionalize) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerFrontMode) &&
+      !isTensorSubclassLike(input) && !isTensorSubclassLike(grad) &&
+      !isFwGradDefined(input) && !isFwGradDefined(grad);
+}
+
+static Tensor stable_activation_backward_cpu(
+    const Tensor& grad,
+    const Tensor& input,
+    bool is_tanh,
+    bool negate = false) {
+  Tensor result;
+  auto iterator = at::TensorIterator::binary_op(result, grad, input);
+  if (is_tanh) {
+    at::native::tanh_backward_from_input_stub(at::kCPU, iterator);
+  } else if (negate) {
+    at::native::log_sigmoid_double_backward_from_input_stub(at::kCPU, iterator);
+  } else {
+    at::native::sigmoid_backward_from_input_stub(at::kCPU, iterator);
+  }
+  return iterator.output();
+}
+
+Tensor sigmoid_backward_from_input(
+    const Tensor& grad,
+    const Tensor& input,
+    const Tensor& output) {
+  if (input.is_complex()) {
+    return at::sigmoid_backward(grad, output);
+  }
+  if (areAnyTensorSubclassLike({grad, input})) {
+    return at::native::stable_sigmoid_backward_math(grad, input);
+  }
+  return at::_sigmoid_backward_from_input(grad, input);
+}
+
+Tensor tanh_backward_from_input(
+    const Tensor& grad,
+    const Tensor& input,
+    const Tensor& output) {
+  if (input.is_complex()) {
+    return at::tanh_backward(grad, output);
+  }
+  if (areAnyTensorSubclassLike({grad, input})) {
+    return at::native::stable_tanh_backward_math(grad, input);
+  }
+  return at::_tanh_backward_from_input(grad, input);
+}
+
 Tensor infinitely_differentiable_silu_backward(
     const Tensor& grad_output,
     const Tensor& input) {
-  const Tensor sigmoid = input.sigmoid();
-  return grad_output * sigmoid * (1.0 + input * (1.0 - sigmoid));
+  if (input.is_complex()) {
+    const Tensor sigmoid = input.sigmoid();
+    return grad_output * sigmoid * (1.0 + input * (1.0 - sigmoid));
+  }
+  if (areAnyTensorSubclassLike({grad_output, input})) {
+    return at::native::stable_silu_backward_math(grad_output, input);
+  }
+  return at::_silu_backward_from_input(grad_output, input);
+}
+
+static Tensor activation_double_backward_from_input(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& input,
+    bool is_tanh,
+    bool is_silu) {
+  if (can_use_stable_activation_backward_cpu(grad, input) &&
+      can_use_stable_activation_backward_cpu(grad_output, input)) {
+    Tensor result;
+    auto iterator = at::TensorIteratorConfig()
+                        .add_output(result)
+                        .add_const_input(grad)
+                        .add_const_input(grad_output)
+                        .add_const_input(input)
+                        .build();
+    if (is_tanh) {
+      at::native::tanh_double_backward_from_input_stub(at::kCPU, iterator);
+    } else if (is_silu) {
+      at::native::silu_double_backward_from_input_stub(at::kCPU, iterator);
+    } else {
+      at::native::sigmoid_double_backward_from_input_stub(at::kCPU, iterator);
+    }
+    return iterator.output();
+  }
+  const auto work = at::isReducedFloatingType(input.scalar_type())
+      ? input.to(at::kFloat)
+      : input;
+  const auto quarter =
+      (at::where(work < 0, work, -work) * (is_tanh ? 0.5 : 0.25)).exp();
+  const auto factor =
+      (is_tanh ? 2 : 1) * quarter / (1 + quarter.square().square());
+  Tensor coefficient;
+  if (is_tanh) {
+    coefficient = -2 * work.tanh();
+  } else {
+    const auto centered = (work * 0.5).tanh();
+    coefficient = is_silu ? 2 - work * centered : -centered;
+  }
+  const auto incoming = grad.to(work.scalar_type());
+  const auto scale = grad_output.to(work.scalar_type());
+  const auto product = incoming * scale;
+  const auto finite_product = product.isfinite().logical_and(
+      (product != 0).logical_or(incoming == 0).logical_or(scale == 0));
+  const auto direct_product = at::where(finite_product, incoming, 0) *
+      at::where(finite_product, scale, 0);
+  const auto direct = (((direct_product * quarter) * factor) * quarter) *
+      (factor * coefficient);
+  const auto split =
+      ((at::where(finite_product, 0, incoming) * quarter) * factor) *
+      ((at::where(finite_product, 0, scale) * quarter) *
+       (factor * coefficient));
+  return at::where(finite_product, direct, split).to(input.scalar_type());
+}
+
+Tensor sigmoid_double_backward_from_input(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& input) {
+  return activation_double_backward_from_input(
+      grad, grad_output, input, false, false);
+}
+
+Tensor tanh_double_backward_from_input(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& input) {
+  return activation_double_backward_from_input(
+      grad, grad_output, input, true, false);
+}
+
+Tensor silu_double_backward_from_input(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& input) {
+  return activation_double_backward_from_input(
+      grad, grad_output, input, false, true);
+}
+
+static Tensor activation_backward_from_input_jvp(
+    const Tensor& grad_output,
+    const Tensor& grad_output_t,
+    const Tensor& input,
+    const Tensor& input_t,
+    int kind) {
+  Tensor result;
+  if (grad_output_t.defined() && !grad_output_t._is_zerotensor()) {
+    result = kind == 0 ? at::_sigmoid_backward_from_input(grad_output_t, input)
+        : kind == 1    ? at::_tanh_backward_from_input(grad_output_t, input)
+                       : at::_silu_backward_from_input(grad_output_t, input);
+  }
+  if (input_t.defined() && !input_t._is_zerotensor()) {
+    auto term = activation_double_backward_from_input(
+        input_t, grad_output, input, kind == 1, kind == 2);
+    result = result.defined() ? result + term : term;
+  }
+  return result.defined() ? result : at::zeros_like(input);
+}
+
+Tensor sigmoid_backward_from_input_jvp(
+    const Tensor& grad_output,
+    const Tensor& grad_output_t,
+    const Tensor& input,
+    const Tensor& input_t) {
+  return activation_backward_from_input_jvp(
+      grad_output, grad_output_t, input, input_t, 0);
+}
+
+Tensor tanh_backward_from_input_jvp(
+    const Tensor& grad_output,
+    const Tensor& grad_output_t,
+    const Tensor& input,
+    const Tensor& input_t) {
+  return activation_backward_from_input_jvp(
+      grad_output, grad_output_t, input, input_t, 1);
+}
+
+Tensor silu_backward_from_input_jvp(
+    const Tensor& grad_output,
+    const Tensor& grad_output_t,
+    const Tensor& input,
+    const Tensor& input_t) {
+  return activation_backward_from_input_jvp(
+      grad_output, grad_output_t, input, input_t, 2);
 }
 
 Tensor infinitely_differentiable_mish_backward(
@@ -2794,8 +3002,15 @@ Tensor binary_cross_entropy_with_logits_target_backward(
 }
 
 Tensor log_sigmoid_double_backward(const Tensor& grad, const Tensor& input) {
-  auto z = input.sigmoid();
-  return grad * (z - 1) * z;
+  if (input.is_complex()) {
+    const auto sigmoid = input.sigmoid();
+    return grad * (sigmoid - 1) * sigmoid;
+  }
+  if (can_use_stable_activation_backward_cpu(grad, input)) {
+    return stable_activation_backward_cpu(grad, input, false, true);
+  }
+  const auto root = std::get<0>(sigmoid_derivative_factors(input));
+  return (-(grad * root) * root).to(input.scalar_type());
 }
 
 Tensor softmax_double_backward(
@@ -6813,40 +7028,244 @@ Tensor stack_jvp(at::TensorList tensors, int64_t dim) {
   return out_fw_grad;
 }
 
+static std::pair<Tensor, Tensor> product_jvp_scan(
+    const Tensor& primal,
+    const Tensor& tangent,
+    int64_t dim,
+    const Tensor& groups = Tensor()) {
+  auto values = at::_product_scan_jvp(
+      primal,
+      tangent,
+      dim,
+      groups.defined() ? std::optional<Tensor>(groups) : std::nullopt);
+  return {std::move(std::get<0>(values)), std::move(std::get<1>(values))};
+}
+
+static std::vector<Tensor> combine_product_scan_states(
+    const std::vector<Tensor>& left,
+    const std::vector<Tensor>& right,
+    const Tensor& same_group,
+    bool adjoint) {
+  auto active_left = left;
+  auto active_right = right;
+  if (same_group.defined()) {
+    for (const auto component : c10::irange(4)) {
+      active_left[component] =
+          at::where(same_group, left[component], component == 0 ? 1 : 0);
+      active_right[component] =
+          at::where(same_group, right[component], component == 0 ? 1 : 0);
+    }
+  }
+  std::vector<Tensor> result{
+      active_left[0] * active_right[0],
+      active_left[1] * active_right[0] + active_left[0] * active_right[1],
+      adjoint
+          ? active_right[2] + active_right[0] * active_left[2] +
+              active_right[1] * active_left[3]
+          : active_left[2] * active_right[0] + active_left[0] * active_right[2],
+      adjoint ? active_right[3] + active_right[0] * active_left[3]
+              : active_left[3] * active_right[0] +
+              active_left[1] * active_right[2] +
+              active_left[2] * active_right[1] +
+              active_left[0] * active_right[3]};
+  if (same_group.defined()) {
+    for (const auto component : c10::irange(4)) {
+      result[component] =
+          at::where(same_group, result[component], right[component]);
+    }
+  }
+  return result;
+}
+
+static std::vector<Tensor> product_scan_state_tree(
+    const std::vector<Tensor>& values,
+    int64_t dim,
+    const Tensor& groups,
+    bool adjoint) {
+  const auto length = values[0].size(dim);
+  if (length <= 1) {
+    return values;
+  }
+  const auto pair_count = length / 2;
+  std::vector<Tensor> left(4), right(4), even_values(4);
+  for (const auto component : c10::irange(4)) {
+    left[component] = values[component].slice(dim, 0, 2 * pair_count, 2);
+    right[component] = values[component].slice(dim, 1, 2 * pair_count, 2);
+    even_values[component] = values[component].slice(dim, 0, length, 2);
+  }
+  const auto pair_groups =
+      groups.defined() ? groups.slice(dim, 1, 2 * pair_count, 2) : Tensor();
+  const auto same_pair = groups.defined()
+      ? pair_groups.eq(groups.slice(dim, 0, 2 * pair_count, 2))
+      : Tensor();
+  const auto odd_prefixes = product_scan_state_tree(
+      combine_product_scan_states(left, right, same_pair, adjoint),
+      dim,
+      pair_groups,
+      adjoint);
+  const auto remaining = even_values[0].size(dim) - 1;
+  std::vector<Tensor> even_prefixes(4);
+  for (const auto component : c10::irange(4)) {
+    even_prefixes[component] = even_values[component].slice(dim, 0, 1);
+  }
+  if (remaining > 0) {
+    for (const auto component : c10::irange(4)) {
+      left[component] = odd_prefixes[component].slice(dim, 0, remaining);
+      right[component] = even_values[component].slice(dim, 1);
+    }
+    const auto same_prefix = groups.defined()
+        ? groups.slice(dim, 2, length, 2)
+              .eq(pair_groups.slice(dim, 0, remaining))
+        : Tensor();
+    const auto suffixes =
+        combine_product_scan_states(left, right, same_prefix, adjoint);
+    for (const auto component : c10::irange(4)) {
+      even_prefixes[component] =
+          at::cat({even_prefixes[component], suffixes[component]}, dim);
+    }
+  }
+  std::vector<Tensor> result(4);
+  for (const auto component : c10::irange(4)) {
+    result[component] = at::stack(
+                            {even_prefixes[component].slice(dim, 0, pair_count),
+                             odd_prefixes[component]},
+                            dim + 1)
+                            .flatten(dim, dim + 1);
+    if (length % 2) {
+      result[component] = at::cat(
+          {result[component], even_prefixes[component].slice(dim, pair_count)},
+          dim);
+    }
+  }
+  return result;
+}
+
+std::tuple<Tensor, Tensor> product_scan_jvp_backward(
+    const Tensor& grad_product,
+    const Tensor& grad_derivative,
+    const Tensor& primal,
+    const Tensor& tangent,
+    const Tensor& product,
+    const Tensor& derivative,
+    int64_t dim,
+    const std::optional<Tensor>& groups) {
+  const auto product_gradient =
+      grad_product.defined() ? grad_product : at::zeros_like(primal);
+  const auto derivative_gradient =
+      grad_derivative.defined() ? grad_derivative : at::zeros_like(tangent);
+  if (primal.dim() == 0 || primal.numel() == 0) {
+    return {product_gradient, derivative_gradient};
+  }
+  dim = at::maybe_wrap_dim(dim, primal.dim());
+  const auto group_ids = groups.has_value() ? *groups : Tensor();
+  if (can_use_stable_activation_backward_cpu(primal, tangent) &&
+      can_use_stable_activation_backward_cpu(product_gradient, primal) &&
+      can_use_stable_activation_backward_cpu(derivative_gradient, primal) &&
+      !isTensorSubclassLike(product) && !isTensorSubclassLike(derivative) &&
+      !isFwGradDefined(product) && !isFwGradDefined(derivative)) {
+    auto input = primal.movedim(dim, -1).contiguous();
+    auto direction = tangent.movedim(dim, -1).contiguous();
+    auto prefix_product = product.movedim(dim, -1).contiguous();
+    auto prefix_derivative = derivative.movedim(dim, -1).contiguous();
+    auto incoming_product = product_gradient.movedim(dim, -1).contiguous();
+    auto incoming_derivative =
+        derivative_gradient.movedim(dim, -1).contiguous();
+    auto identifiers = group_ids.defined()
+        ? group_ids.movedim(dim, -1).contiguous()
+        : Tensor();
+    auto grad_input = at::empty_like(input);
+    auto grad_direction = at::empty_like(direction);
+    at::native::product_scan_jvp_backward_stub(
+        at::kCPU,
+        incoming_product,
+        incoming_derivative,
+        input,
+        direction,
+        prefix_product,
+        prefix_derivative,
+        identifiers,
+        input.size(-1),
+        grad_input,
+        grad_direction);
+    return {grad_input.movedim(-1, dim), grad_direction.movedim(-1, dim)};
+  }
+  const auto length = primal.size(dim);
+  const auto head = primal.slice(dim, 0, 1);
+  const auto identity = at::ones_like(head);
+  const auto zero = at::zeros_like(head);
+  const auto next_product =
+      at::cat({primal.slice(dim, 1, length).conj(), identity}, dim);
+  const auto next_derivative =
+      at::cat({tangent.slice(dim, 1, length).conj(), zero}, dim);
+  auto adjoints = product_scan_state_tree(
+      {next_product.flip({dim}),
+       next_derivative.flip({dim}),
+       product_gradient.flip({dim}),
+       derivative_gradient.flip({dim})},
+      dim,
+      group_ids.defined() ? group_ids.flip({dim}) : Tensor(),
+      true);
+  const auto product_adjoint = adjoints[2].flip({dim});
+  const auto derivative_adjoint = adjoints[3].flip({dim});
+  const auto previous_product =
+      at::cat({identity, product.slice(dim, 0, length - 1).conj()}, dim);
+  const auto previous_derivative =
+      at::cat({zero, derivative.slice(dim, 0, length - 1).conj()}, dim);
+  const auto head_mask = at::zeros_like(head, head.options().dtype(at::kBool));
+  const auto rest_mask = group_ids.defined()
+      ? group_ids.slice(dim, 1, length).eq(group_ids.slice(dim, 0, length - 1))
+      : at::ones_like(
+            primal.slice(dim, 1, length), head.options().dtype(at::kBool));
+  const auto active = at::cat({head_mask, rest_mask}, dim);
+  const auto active_product = at::where(active, product_adjoint, 0);
+  const auto active_derivative = at::where(active, derivative_adjoint, 0);
+  const auto prefix_product = at::where(active, previous_product, 1);
+  const auto prefix_derivative = at::where(active, previous_derivative, 0);
+  return {
+      at::where(
+          active,
+          active_product * prefix_product +
+              active_derivative * prefix_derivative,
+          product_adjoint),
+      at::where(
+          active, active_derivative * prefix_product, derivative_adjoint)};
+}
+
+Tensor product_scan_jvp_forward(
+    const Tensor& primal,
+    const Tensor& primal_t,
+    const Tensor& tangent,
+    const Tensor& tangent_t,
+    int64_t dim,
+    const std::optional<Tensor>& groups) {
+  auto input_direction = primal_t.defined() ? primal_t : at::zeros_like(primal);
+  auto tangent_direction =
+      tangent_t.defined() ? tangent_t : at::zeros_like(tangent);
+  if (primal.dim() == 0 || primal.numel() == 0) {
+    return tangent_direction;
+  }
+  dim = at::maybe_wrap_dim(dim, primal.dim());
+  const auto group_ids = groups.has_value() ? *groups : Tensor();
+  return product_scan_state_tree(
+      {primal, tangent, input_direction, tangent_direction},
+      dim,
+      group_ids,
+      false)[3];
+}
+
 Tensor cumprod_jvp(
     const Tensor& self_t,
     const Tensor& self_p,
     const Tensor& result,
     int dim) {
-  // Generic formula when no 0. is involved
-  Tensor gradient = (self_t / self_p).cumsum(dim) * result;
-
-  // Note that we have to use at::where below as we are removing nans
-
-  if (self_p.dim() == 0) {
-    gradient.masked_fill_(self_p.eq(0), self_t);
-    return gradient;
-  } else {
-    // For input (a, 0, b, 0, c) with gradients (t0, t1, t2, t3, t4)
-    // The output of cumprod is (a, 0, 0, 0, 0)
-    // The gradient we want to compute is (t0, a*t1, a*b*t1, 0, 0)
-    // We do this by:
-    // Get a mask of all zeros (0, 1, 0, 1, 0)
-    auto mask_zeros = self_p.eq(0);
-    // Get a mask of the first zero for each dim (0, 1, 0, 0, 0)
-    auto mask_first_zero = mask_zeros.logical_and(mask_zeros.cumsum(dim).eq(1));
-
-    // Get the new grad value that should be used after any zero happened:
-    // (X, a*t1, a*b*t1, 0, 0) = cumprod((a, t1, b, 0, c))
-    auto new_grad = at::where(mask_first_zero, self_t, self_p).cumprod(dim);
-
-    // Get a mask of everything after the first zero: (0, 1, 1, 1, 1)
-    auto mask_after_first_zero = mask_first_zero.cumsum(dim);
-
-    // Do the final replacement
-    return at::where(
-        mask_after_first_zero.to(ScalarType::Bool), new_grad, gradient);
+  if (self_p.dim() == 0 || self_p.numel() == 0) {
+    return self_t.to(result.scalar_type());
   }
+  auto dtype = result.scalar_type();
+  auto work_dtype =
+      dtype == at::kHalf || dtype == at::kBFloat16 ? at::kFloat : dtype;
+  return product_jvp_scan(self_p.to(work_dtype), self_t.to(work_dtype), dim)
+      .second.to(dtype);
 }
 
 // Helper for {batch,layer,group}_norms below
@@ -7525,6 +7944,247 @@ Tensor lu_factor_ex_jvp(
   }
 }
 
+static bool can_use_log_softmax_composition(const Tensor& output) {
+  return (output.device().is_cpu() || output.device().is_cuda()) &&
+      output.layout() == at::kStrided && !output.is_nested() &&
+      output.is_floating_point() && output.sym_numel() > 0;
+}
+
+static Tensor log_softmax_work_tensor(const Tensor& value) {
+  return at::isReducedFloatingType(value.scalar_type()) ? value.to(at::kFloat)
+                                                        : value;
+}
+
+static double log_softmax_tiny(const Tensor& value) {
+  return value.scalar_type() == at::kDouble ? std::numeric_limits<double>::min()
+                                            : std::numeric_limits<float>::min();
+}
+
+static std::tuple<Tensor, Tensor, Tensor> log_softmax_pivot(
+    const Tensor& output,
+    int64_t dim) {
+  auto pivot = output.argmax(dim, true);
+  auto mask = at::zeros_like(output, output.options().dtype(at::kBool))
+                  .scatter(dim, pivot, true);
+  return {pivot, mask, output.gather(dim, pivot)};
+}
+
+static Tensor log_softmax_scaled_exp_sum(
+    const Tensor& factor,
+    const Tensor& root,
+    int64_t dim) {
+  auto products = (factor * root) * root;
+  auto largest = root.amax({dim}, true);
+  auto divisor =
+      at::where((largest > 0).logical_and(largest.isfinite()), largest, 1);
+  auto ratio = root / divisor;
+  auto reduced = ((factor * ratio) * ratio).sum(dim, true);
+  auto finite = reduced.isfinite();
+  auto stable = (at::where(finite, reduced, 0) * largest) * largest;
+  auto tiny = products.abs().amax({dim}, true) < log_softmax_tiny(products);
+  return at::where(finite.logical_and(tiny), stable, products.sum(dim, true));
+}
+
+static Tensor log_softmax_centered_jvp(
+    const Tensor& tangent,
+    const Tensor& output,
+    int64_t dim,
+    bool normalized) {
+  auto work = log_softmax_work_tensor(output);
+  auto direction = tangent.to(work.scalar_type());
+  auto [pivot, mask, pivot_output] = log_softmax_pivot(work, dim);
+  auto pivot_direction = direction.gather(dim, pivot);
+  auto centered = direction - pivot_direction;
+  auto finite_centered = centered.isfinite().all(dim, true);
+  auto safe_centered = at::where(finite_centered, centered, 0);
+  auto root =
+      (at::where(mask, -std::numeric_limits<double>::infinity(), work) * 0.5)
+          .exp();
+  auto weighted = log_softmax_scaled_exp_sum(safe_centered, root, dim);
+  auto result = safe_centered - weighted;
+  if (!normalized) {
+    auto correction = pivot_direction * (-pivot_output.expm1());
+    correction =
+        correction - log_softmax_scaled_exp_sum(pivot_direction, root, dim);
+    result = result + correction;
+  }
+  auto original = direction - (direction * work.exp()).sum(dim, true);
+  auto safe = finite_centered.logical_and(result.isfinite());
+  return at::where(safe, result, original).to(output.scalar_type());
+}
+
+Tensor log_softmax_reduced_input(const Tensor& input) {
+  return at::isReducedFloatingType(input.scalar_type()) ? input.to(at::kFloat)
+                                                        : Tensor();
+}
+
+Tensor log_softmax_backward(
+    const Tensor& grad,
+    const Tensor& output,
+    int64_t dim,
+    ScalarType input_dtype,
+    const Tensor& reduced_input) {
+  if (reduced_input.defined()) {
+    const auto precise_output = at::_log_softmax(reduced_input, dim, false);
+    return at::_log_softmax_backward_data(
+               grad.to(at::kFloat), precise_output, dim, at::kFloat)
+        .to(input_dtype);
+  }
+  auto result = at::_log_softmax_backward_data(grad, output, dim, input_dtype);
+  if (!can_use_log_softmax_composition(output)) {
+    return result;
+  }
+  if (!areAnyTensorSubclassLike({grad, output}) && !isFwGradDefined(grad) &&
+      !isFwGradDefined(output) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::Functionalize) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchBatched) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerFrontMode) &&
+      !c10::impl::tls_is_dispatch_key_included(
+          c10::DispatchKey::FuncTorchDynamicLayerBackMode) &&
+      !c10::impl::tls_is_dispatch_key_included(c10::DispatchKey::Tracer)) {
+    at::NoGradGuard no_grad;
+    const auto maximum = output.amax().item<double>();
+    if (maximum < -log_softmax_tiny(output)) {
+      return result;
+    }
+  }
+  auto work = log_softmax_work_tensor(output);
+  auto cotangent = grad.to(work.scalar_type());
+  auto [pivot, mask, pivot_output] = log_softmax_pivot(work, dim);
+  auto pivot_gradient = cotangent.gather(dim, pivot);
+  auto root =
+      (at::where(mask, -std::numeric_limits<double>::infinity(), work) * 0.5)
+          .exp();
+  auto tail = log_softmax_scaled_exp_sum(pivot_gradient, root, dim);
+  auto other = at::where(mask, 0, cotangent).sum(dim, true);
+  auto eligible =
+      (pivot_output >= -log_softmax_tiny(work)).logical_and(pivot_output <= 0);
+  eligible = eligible.logical_and(other.isfinite())
+                 .logical_and(cotangent.sum(dim, true).isfinite());
+  auto corrected =
+      tail - pivot_output.exp() * at::where(other.isfinite(), other, 0);
+  return at::where(
+             mask.logical_and(eligible),
+             corrected,
+             result.to(work.scalar_type()))
+      .to(input_dtype);
+}
+
+Tensor log_softmax_jvp(
+    const Tensor& self_p,
+    const Tensor& self_t,
+    const Tensor& output,
+    int64_t dim) {
+  if (at::isReducedFloatingType(self_p.scalar_type())) {
+    const auto precise_output =
+        at::_log_softmax(self_p.to(at::kFloat), dim, false);
+    return log_softmax_centered_jvp(
+               self_t.to(at::kFloat), precise_output, dim, true)
+        .to(output.scalar_type());
+  }
+  if (!can_use_log_softmax_composition(output)) {
+    return self_t - logsumexp_jvp(self_p, self_t, {dim}, true);
+  }
+  return log_softmax_centered_jvp(self_t, output, dim, true);
+}
+
+Tensor log_softmax_backward_grad_output(
+    const Tensor& grad,
+    const Tensor& output,
+    int64_t dim) {
+  if (!can_use_log_softmax_composition(output)) {
+    auto direction = grad.to(output.scalar_type());
+    return direction - (direction * output.exp()).sum(dim, true);
+  }
+  if (can_use_stable_activation_backward_cpu(grad, output) &&
+      (output.scalar_type() == at::kFloat ||
+       output.scalar_type() == at::kDouble) &&
+      output.dim() > 0 &&
+      at::maybe_wrap_dim(dim, output.dim()) == output.dim() - 1) {
+    auto result = at::empty_like(output, at::MemoryFormat::Contiguous);
+    if (at::native::log_softmax_jvp_lastdim_stub(
+            at::kCPU, result, grad.contiguous(), output.contiguous())) {
+      return result;
+    }
+  }
+  return log_softmax_centered_jvp(grad, output, dim, false);
+}
+
+Tensor log_softmax_backward_output(
+    const Tensor& grad,
+    const Tensor& grad_output,
+    const Tensor& output,
+    int64_t dim) {
+  if (can_use_stable_activation_backward_cpu(grad, output) &&
+      can_use_stable_activation_backward_cpu(grad_output, output)) {
+    const auto work_dtype = at::toOpMathType(output.scalar_type());
+    auto scale = -grad_output.to(work_dtype).sum(dim, true);
+    if (output.dim() > 1 && output.size(-1) < 16 && output.is_contiguous() &&
+        grad.is_contiguous() && scale.numel() > 1 &&
+        scale.numel() != output.numel()) {
+      scale = scale.expand_as(output).contiguous();
+    }
+    Tensor result = at::empty_like(output);
+    auto iterator = at::TensorIteratorConfig()
+                        .add_output(result)
+                        .add_const_input(scale)
+                        .add_const_input(grad)
+                        .add_const_input(output)
+                        .promote_inputs_to_common_dtype(true)
+                        .cast_common_dtype_to_outputs(true)
+                        .enforce_safe_casting_to_output(true)
+                        .build();
+    at::native::log_softmax_double_backward_stub(at::kCPU, iterator);
+    return iterator.output();
+  }
+  auto original = (-grad_output.sum(dim, true) * output.exp() *
+                   grad.to(output.scalar_type()))
+                      .to(output.scalar_type());
+  if (!can_use_log_softmax_composition(output)) {
+    return original;
+  }
+  auto work = log_softmax_work_tensor(output);
+  auto incoming = grad.to(work.scalar_type());
+  auto scale = -grad_output.to(work.scalar_type()).sum(dim, true);
+  auto product = scale * incoming;
+  auto finite_product = product.isfinite();
+  auto root = (work * 0.25).exp();
+  auto finite_value = (at::where(finite_product, product, 0) * root) * root;
+  finite_value = (finite_value * root) * root;
+  auto split_value = ((scale * root) * root) * ((incoming * root) * root);
+  auto result = at::where(finite_product, finite_value, split_value);
+  auto safe =
+      scale.isfinite().logical_and(incoming.isfinite()).logical_and(work <= 0);
+  return at::where(safe, result, original.to(work.scalar_type()))
+      .to(output.scalar_type());
+}
+
+Tensor log_softmax_backward_jvp(
+    const Tensor& grad_output_p,
+    const Tensor& grad_output_t,
+    const Tensor& output_p,
+    const Tensor& output_t,
+    int64_t dim,
+    ScalarType input_dtype) {
+  Tensor result;
+  if (grad_output_t.defined() && !grad_output_t._is_zerotensor()) {
+    result = at::_log_softmax_backward_data(
+        grad_output_t, output_p, dim, input_dtype);
+  }
+  if (output_t.defined() && !output_t._is_zerotensor()) {
+    auto term =
+        log_softmax_backward_output(output_t, grad_output_p, output_p, dim)
+            .to(input_dtype);
+    result = result.defined() ? result + term : term;
+  }
+  return result.defined()
+      ? result
+      : at::zeros_like(output_p, output_p.options().dtype(input_dtype));
+}
+
 Tensor logsumexp_jvp(
     const Tensor& self_p,
     const Tensor& self_t,
@@ -7623,7 +8283,7 @@ std::tuple<Tensor, Tensor> _cudnn_convolution_backward(
 Tensor scatter_reduce_jvp(
     const Tensor& self_p,
     const Tensor& self_t,
-    int dim,
+    int64_t dim,
     const Tensor& index,
     const Tensor& src_p,
     const Tensor& src_t,
@@ -7636,6 +8296,59 @@ Tensor scatter_reduce_jvp(
     //  auto mask = x == restore_reduced_dims(result, dim, keepdim);
     //  return at::where(mask, dx, 0.).sum(dim, keepdim) / mask.sum(dim,
     //  keepdim);
+  } else if (reduce == "prod") {
+    if (index.numel() == 0) {
+      return self_t;
+    }
+    if (self_p.dim() == 0) {
+      return include_self ? self_t * src_p + self_p * src_t : src_t;
+    }
+    dim = at::maybe_wrap_dim(dim, self_p.dim());
+    auto dtype = result.scalar_type();
+    auto work_dtype =
+        dtype == at::kHalf || dtype == at::kBFloat16 ? at::kFloat : dtype;
+    auto source = src_p.to(work_dtype);
+    auto source_tangent = src_t.to(work_dtype);
+    for (int64_t axis = 0; axis < index.dim(); ++axis) {
+      source = source.slice(axis, 0, index.size(axis));
+      source_tangent = source_tangent.slice(axis, 0, index.size(axis));
+    }
+    auto sorted = at::sort(index, dim);
+    auto ordered_index = std::get<0>(sorted);
+    auto permutation = std::get<1>(sorted);
+    auto scan = product_jvp_scan(
+        source.gather(dim, permutation),
+        source_tangent.gather(dim, permutation),
+        dim,
+        ordered_index);
+    const auto length = ordered_index.size(dim);
+    auto tails = at::cat(
+        {ordered_index.slice(dim, 0, length - 1)
+             .ne(ordered_index.slice(dim, 1, length)),
+         at::ones_like(
+             ordered_index.slice(dim, length - 1, length),
+             ordered_index.options().dtype(at::kBool))},
+        dim);
+    auto primal = self_p.to(work_dtype);
+    auto tangent = self_t.to(work_dtype);
+    auto present = at::zeros_like(primal, primal.options().dtype(at::kLong))
+                       .scatter_add(dim, ordered_index, tails.to(at::kLong))
+                       .ne(0);
+    auto group_tangent = at::zeros_like(primal).scatter_add(
+        dim, ordered_index, at::where(tails, scan.second, 0));
+    if (!include_self) {
+      return at::where(present, group_tangent, tangent).to(dtype);
+    }
+    auto group_product = at::zeros_like(primal).scatter_add(
+        dim, ordered_index, at::where(tails, scan.first, 0));
+    group_product = at::where(present, group_product, 1);
+    auto active_primal = at::where(present, primal, 0);
+    auto active_tangent = at::where(present, tangent, 0);
+    return at::where(
+               present,
+               active_tangent * group_product + active_primal * group_tangent,
+               tangent)
+        .to(dtype);
   } else if (reduce == "amin" || reduce == "amax") {
     auto gather_result = at::gather(result, dim, index);
     auto mask_self = self_p == result;

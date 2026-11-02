@@ -490,6 +490,120 @@ DEFINE_DISPATCH(argmax_stub);
 DEFINE_DISPATCH(argmin_stub);
 DEFINE_DISPATCH(cumsum_stub);
 DEFINE_DISPATCH(cumprod_stub);
+DEFINE_DISPATCH(product_scan_jvp_stub);
+DEFINE_DISPATCH(product_scan_jvp_backward_stub);
+
+static std::pair<Tensor, Tensor> combine_product_scan_pairs(
+    const Tensor& left_product,
+    const Tensor& left_derivative,
+    const Tensor& right_product,
+    const Tensor& right_derivative,
+    const Tensor& same_group) {
+  if (!same_group.defined()) {
+    return {left_product * right_product,
+            left_derivative * right_product + left_product * right_derivative};
+  }
+  const auto left = at::where(same_group, left_product, 1);
+  const auto right = at::where(same_group, right_product, 1);
+  const auto left_tangent = at::where(same_group, left_derivative, 0);
+  const auto right_tangent = at::where(same_group, right_derivative, 0);
+  return {at::where(same_group, left * right, right_product),
+          at::where(same_group,
+                    left_tangent * right + left * right_tangent,
+                    right_derivative)};
+}
+
+static std::pair<Tensor, Tensor> product_scan_pair_tree(
+    const Tensor& primal,
+    const Tensor& tangent,
+    int64_t dim,
+    const Tensor& groups) {
+  const auto length = primal.size(dim);
+  if (length <= 1) {
+    return {primal.clone(), tangent.clone()};
+  }
+  const auto pair_count = length / 2;
+  const auto left_product = primal.slice(dim, 0, pair_count * 2, 2);
+  const auto right_product = primal.slice(dim, 1, pair_count * 2, 2);
+  const auto left_derivative = tangent.slice(dim, 0, pair_count * 2, 2);
+  const auto right_derivative = tangent.slice(dim, 1, pair_count * 2, 2);
+  Tensor pair_groups;
+  Tensor same_group;
+  if (groups.defined()) {
+    pair_groups = groups.slice(dim, 1, pair_count * 2, 2);
+    same_group = pair_groups.eq(groups.slice(dim, 0, pair_count * 2, 2));
+  }
+  const auto pairs = combine_product_scan_pairs(
+      left_product, left_derivative, right_product, right_derivative, same_group);
+  auto odd_prefixes = product_scan_pair_tree(
+      pairs.first, pairs.second, dim, pair_groups);
+  const auto even_product = primal.slice(dim, 0, length, 2);
+  const auto even_derivative = tangent.slice(dim, 0, length, 2);
+  const auto remaining = even_product.size(dim) - 1;
+  Tensor even_prefix_product = even_product.slice(dim, 0, 1);
+  Tensor even_prefix_derivative = even_derivative.slice(dim, 0, 1);
+  if (remaining > 0) {
+    same_group = groups.defined()
+        ? groups.slice(dim, 2, length, 2).eq(pair_groups.slice(dim, 0, remaining))
+        : Tensor();
+    auto suffixes = combine_product_scan_pairs(
+        odd_prefixes.first.slice(dim, 0, remaining),
+        odd_prefixes.second.slice(dim, 0, remaining),
+        even_product.slice(dim, 1), even_derivative.slice(dim, 1), same_group);
+    even_prefix_product = at::cat({even_prefix_product, suffixes.first}, dim);
+    even_prefix_derivative = at::cat({even_prefix_derivative, suffixes.second}, dim);
+  }
+  auto product = at::stack(
+      {even_prefix_product.slice(dim, 0, pair_count), odd_prefixes.first}, dim + 1)
+                     .flatten(dim, dim + 1);
+  auto derivative = at::stack(
+      {even_prefix_derivative.slice(dim, 0, pair_count), odd_prefixes.second}, dim + 1)
+                        .flatten(dim, dim + 1);
+  if (length % 2) {
+    product = at::cat({product, even_prefix_product.slice(dim, pair_count)}, dim);
+    derivative = at::cat({derivative, even_prefix_derivative.slice(dim, pair_count)}, dim);
+  }
+  return {std::move(product), std::move(derivative)};
+}
+
+std::tuple<Tensor, Tensor> product_scan_jvp_math(
+    const Tensor& primal,
+    const Tensor& tangent,
+    int64_t dim,
+    const std::optional<Tensor>& groups) {
+  if (primal.dim() == 0) {
+    return {primal.clone(), tangent.clone()};
+  }
+  dim = maybe_wrap_dim(dim, primal.dim());
+  auto values = product_scan_pair_tree(
+      primal, tangent, dim, groups.has_value() ? *groups : Tensor());
+  return {std::move(values.first), std::move(values.second)};
+}
+
+std::tuple<Tensor, Tensor> product_scan_jvp_cpu(
+    const Tensor& primal,
+    const Tensor& tangent,
+    int64_t dim,
+    const std::optional<Tensor>& groups) {
+  TORCH_CHECK(primal.sizes() == tangent.sizes(), "Product scan tangent shape mismatch");
+  TORCH_CHECK(primal.scalar_type() == tangent.scalar_type(), "Product scan tangent dtype mismatch");
+  if (primal.dim() == 0 || primal.numel() == 0) {
+    return {primal.clone(), tangent.clone()};
+  }
+  dim = maybe_wrap_dim(dim, primal.dim());
+  auto input = primal.movedim(dim, -1).contiguous();
+  auto direction = tangent.movedim(dim, -1).contiguous();
+  Tensor group_ids;
+  if (groups.has_value() && groups->defined()) {
+    TORCH_CHECK(groups->sizes() == primal.sizes() && groups->scalar_type() == kLong,
+                "Product scan requires shape-matched int64 groups");
+    group_ids = groups->movedim(dim, -1).contiguous();
+  }
+  auto product = at::empty_like(input);
+  auto derivative = at::empty_like(direction);
+  product_scan_jvp_stub(kCPU, input, direction, group_ids, input.size(-1), product, derivative);
+  return {product.movedim(-1, dim), derivative.movedim(-1, dim)};
+}
 DEFINE_DISPATCH(logcumsumexp_stub);
 DEFINE_DISPATCH(xor_sum_stub);
 

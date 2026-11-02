@@ -1161,6 +1161,283 @@ void silu_kernel(TensorIteratorBase& iter) {
     }
 }
 
+template <typename scalar_t, bool IsTanh, bool Negate>
+void stable_activation_backward_kernel_impl(TensorIteratorBase& iter) {
+        using opmath_t = at::opmath_type<scalar_t>;
+        using Vec = Vectorized<opmath_t>;
+        const auto root_vector = [](Vec input) {
+          const Vec one(1);
+          const Vec exponent_scale(IsTanh ? 1 : 0.5);
+          const Vec root_scale(IsTanh ? 2 : 1);
+          const auto exponential = (input.abs().neg() * exponent_scale).exp();
+          return (root_scale * exponential) / (one + exponential * exponential);
+        };
+        const auto scalar_function = [](scalar_t gradient, scalar_t input) -> scalar_t {
+          const opmath_t exponential =
+              std::exp(-std::abs(opmath_t(input)) * opmath_t(IsTanh ? 1 : 0.5));
+          const opmath_t root = opmath_t(IsTanh ? 2 : 1) * exponential /
+              (opmath_t(1) + exponential * exponential);
+          const opmath_t signed_gradient = Negate ? -opmath_t(gradient) : opmath_t(gradient);
+          return static_cast<scalar_t>((signed_gradient * root) * root);
+        };
+        if constexpr (
+            std::is_same_v<scalar_t, c10::Half> ||
+            std::is_same_v<scalar_t, c10::BFloat16>) {
+          cpu_kernel_vec(
+              iter,
+              scalar_function,
+              [root_vector](Vectorized<scalar_t> gradient, Vectorized<scalar_t> input) {
+                auto [input0, input1] = convert_to_float<scalar_t>(input);
+                auto [gradient0, gradient1] = convert_to_float<scalar_t>(gradient);
+                const auto root0 = root_vector(input0);
+                const auto root1 = root_vector(input1);
+                if constexpr (Negate) {
+                  gradient0 = gradient0.neg();
+                  gradient1 = gradient1.neg();
+                }
+                return convert_from_float<scalar_t>(
+                    (gradient0 * root0) * root0,
+                    (gradient1 * root1) * root1);
+              });
+        } else {
+          cpu_kernel_vec(
+              iter,
+              scalar_function,
+              [root_vector](Vec gradient, Vec input) {
+                const auto root = root_vector(input);
+                if constexpr (Negate) {
+                  gradient = gradient.neg();
+                }
+                return (gradient * root) * root;
+              });
+        }
+}
+
+template <bool IsTanh, bool Negate>
+void stable_activation_backward_kernel(TensorIteratorBase& iter) {
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      kHalf, kBFloat16, iter.dtype(), "stable_activation_backward_cpu", [&]() {
+        stable_activation_backward_kernel_impl<scalar_t, IsTanh, Negate>(iter);
+      });
+}
+
+void sigmoid_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<false, false>(iter);
+}
+
+void tanh_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<true, false>(iter);
+}
+
+void log_sigmoid_double_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_backward_kernel<false, true>(iter);
+}
+
+template <typename scalar_t>
+void silu_backward_from_input_kernel_impl(TensorIteratorBase& iter) {
+  using opmath_t = at::opmath_type<scalar_t>;
+  using Vec = Vectorized<opmath_t>;
+  const auto vector_function = [](Vec gradient, Vec input) {
+    const Vec one(1);
+    const auto exponential = (input.abs().neg() * Vec(0.5)).exp();
+    const auto denominator = one + exponential * exponential;
+    const auto root = exponential / denominator;
+    const auto scaled_gradient = gradient * root;
+    return Vec::blendv(
+        gradient / denominator + scaled_gradient * (input * root),
+        scaled_gradient * (exponential + input * root),
+        input < Vec(0));
+  };
+  const auto scalar_function =
+      [](scalar_t gradient, scalar_t input) -> scalar_t {
+    const opmath_t value = opmath_t(input);
+    const opmath_t exponential = std::exp(-std::abs(value) * opmath_t(0.5));
+    const opmath_t denominator = 1 + exponential * exponential;
+    const opmath_t root = exponential / denominator;
+    const opmath_t scaled_gradient = opmath_t(gradient) * root;
+    return static_cast<scalar_t>(
+        value < 0 ? scaled_gradient * (exponential + value * root)
+                  : opmath_t(gradient) / denominator +
+            scaled_gradient * (value * root));
+  };
+  if constexpr (std::is_same_v<scalar_t, c10::Half> ||
+                std::is_same_v<scalar_t, c10::BFloat16>) {
+    cpu_kernel_vec(
+        iter,
+        scalar_function,
+        [vector_function](Vectorized<scalar_t> gradient,
+                          Vectorized<scalar_t> input) {
+          auto [input0, input1] = convert_to_float<scalar_t>(input);
+          auto [gradient0, gradient1] = convert_to_float<scalar_t>(gradient);
+          return convert_from_float<scalar_t>(
+              vector_function(gradient0, input0),
+              vector_function(gradient1, input1));
+        });
+  } else {
+    cpu_kernel_vec(iter, scalar_function, vector_function);
+  }
+}
+
+void silu_backward_from_input_kernel(TensorIteratorBase& iter) {
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      kHalf,
+      kBFloat16,
+      iter.dtype(),
+      "silu_backward_from_input_cpu",
+      [&]() { silu_backward_from_input_kernel_impl<scalar_t>(iter); });
+}
+
+template <typename scalar_t, bool IsTanh, bool IsSilu>
+void stable_activation_double_backward_kernel_impl(TensorIteratorBase& iter) {
+  using opmath_t = at::opmath_type<scalar_t>;
+  using Vec = Vectorized<opmath_t>;
+  const auto vector_function = [](Vec gradient, Vec grad_output, Vec input) {
+    const Vec one(1);
+    const auto magnitude = input.abs();
+    const auto product = gradient * grad_output;
+    bool ordinary = false;
+    if constexpr (!IsSilu && std::is_same_v<scalar_t, opmath_t>) {
+      const Vec lower(std::is_same_v<opmath_t, double> ? 1e-100 : 1e-10);
+      const Vec upper(std::is_same_v<opmath_t, double> ? 1e100 : 1e10);
+      const auto safe = (magnitude >= lower) &
+          (magnitude <= Vec(std::is_same_v<opmath_t, double> ? 64 : 16)) &
+          (product.abs() >= lower) & (product.abs() <= upper);
+      ordinary = !safe.zero_mask();
+    }
+    Vec quarter(0);
+    Vec exponential(0);
+    if (ordinary) {
+      exponential = (magnitude.neg() * Vec(IsTanh ? 2 : 1)).exp();
+    } else {
+      quarter = (magnitude.neg() * Vec(IsTanh ? 0.5 : 0.25)).exp();
+      const auto square = quarter * quarter;
+      exponential = square * square;
+    }
+    const auto reciprocal = one / (one + exponential);
+    auto centered = (one - exponential) * reciprocal;
+    const auto argument = magnitude * Vec(IsTanh ? 1 : 0.5);
+    const auto near_zero = argument < Vec(std::is_same_v<opmath_t, double> ? 0.0625 : 0.125);
+    if (near_zero.zero_mask() != (1 << Vec::size()) - 1) {
+      const auto argument_square = argument * argument;
+      const auto polynomial = argument * (one + argument_square *
+          (Vec(-1.0 / 3.0) + argument_square *
+           (Vec(2.0 / 15.0) + argument_square *
+            (Vec(-17.0 / 315.0) + argument_square * Vec(62.0 / 2835.0)))));
+      centered = Vec::blendv(centered, polynomial, near_zero);
+    }
+    const auto signed_centered = Vec::blendv(centered, centered.neg(), input < Vec(0));
+    const auto coefficient = IsTanh ? Vec(-2) * signed_centered
+        : IsSilu ? Vec(2) - magnitude * centered : signed_centered.neg();
+    if (ordinary) {
+      return ((product * (Vec(IsTanh ? 4 : 1) * exponential * reciprocal)) *
+              reciprocal) * coefficient;
+    }
+    const auto factor = Vec(IsTanh ? 2 : 1) * quarter * reciprocal;
+    const auto finite_product =
+        (product.abs() < Vec(std::numeric_limits<opmath_t>::infinity())) &
+        ((product != Vec(0)) | (gradient == Vec(0)) | (grad_output == Vec(0)));
+    const auto direct = (((product * quarter) * factor) * quarter) *
+        (factor * coefficient);
+    if (!finite_product.zero_mask()) {
+      return direct;
+    }
+    const auto split = ((gradient * quarter) * factor) *
+        ((grad_output * quarter) * (factor * coefficient));
+    return Vec::blendv(split, direct, finite_product);
+  };
+  const auto scalar_function =
+      [](scalar_t gradient, scalar_t grad_output, scalar_t input) -> scalar_t {
+    const opmath_t value = opmath_t(input);
+    const opmath_t magnitude = std::abs(value);
+    const opmath_t product = opmath_t(gradient) * opmath_t(grad_output);
+    bool ordinary = false;
+    if constexpr (!IsSilu && std::is_same_v<scalar_t, opmath_t>) {
+      const opmath_t lower = std::is_same_v<opmath_t, double> ? 1e-100 : 1e-10;
+      const opmath_t upper = std::is_same_v<opmath_t, double> ? 1e100 : 1e10;
+      ordinary = magnitude >= lower &&
+          magnitude <= opmath_t(std::is_same_v<opmath_t, double> ? 64 : 16) &&
+          std::abs(product) >= lower && std::abs(product) <= upper;
+    }
+    opmath_t quarter = 0;
+    opmath_t exponential;
+    if (ordinary) {
+      exponential = std::exp(-magnitude * opmath_t(IsTanh ? 2 : 1));
+    } else {
+      quarter = std::exp(-magnitude * opmath_t(IsTanh ? 0.5 : 0.25));
+      const opmath_t square = quarter * quarter;
+      exponential = square * square;
+    }
+    const opmath_t reciprocal = 1 / (1 + exponential);
+    const opmath_t argument = magnitude * opmath_t(IsTanh ? 1 : 0.5);
+    const opmath_t argument_square = argument * argument;
+    const opmath_t centered = argument < opmath_t(std::is_same_v<opmath_t, double> ? 0.0625 : 0.125)
+        ? argument * (1 + argument_square *
+            (-1.0 / 3.0 + argument_square *
+             (2.0 / 15.0 + argument_square *
+              (-17.0 / 315.0 + argument_square * (62.0 / 2835.0)))))
+        : (1 - exponential) * reciprocal;
+    const opmath_t signed_centered = value < 0 ? -centered : centered;
+    const opmath_t coefficient = IsTanh ? -2 * signed_centered
+        : IsSilu ? 2 - magnitude * centered : -signed_centered;
+    if (ordinary) {
+      return static_cast<scalar_t>(
+          ((product * (opmath_t(IsTanh ? 4 : 1) * exponential * reciprocal)) *
+           reciprocal) * coefficient);
+    }
+    const opmath_t factor = opmath_t(IsTanh ? 2 : 1) * quarter * reciprocal;
+    if (std::isfinite(product) &&
+        (product != 0 || gradient == scalar_t(0) || grad_output == scalar_t(0))) {
+      return static_cast<scalar_t>(
+          (((product * quarter) * factor) * quarter) * (factor * coefficient));
+    }
+    return static_cast<scalar_t>(
+        ((opmath_t(gradient) * quarter) * factor) *
+        ((opmath_t(grad_output) * quarter) * (factor * coefficient)));
+  };
+  if constexpr (std::is_same_v<scalar_t, c10::Half> ||
+                std::is_same_v<scalar_t, c10::BFloat16>) {
+    cpu_kernel_vec(
+        iter,
+        scalar_function,
+        [vector_function](Vectorized<scalar_t> gradient,
+                          Vectorized<scalar_t> grad_output,
+                          Vectorized<scalar_t> input) {
+          auto [input0, input1] = convert_to_float<scalar_t>(input);
+          auto [gradient0, gradient1] = convert_to_float<scalar_t>(gradient);
+          auto [output0, output1] = convert_to_float<scalar_t>(grad_output);
+          return convert_from_float<scalar_t>(
+              vector_function(gradient0, output0, input0),
+              vector_function(gradient1, output1, input1));
+        });
+  } else {
+    cpu_kernel_vec(iter, scalar_function, vector_function);
+  }
+}
+
+template <bool IsTanh, bool IsSilu>
+void stable_activation_double_backward_kernel(TensorIteratorBase& iter) {
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      kHalf,
+      kBFloat16,
+      iter.dtype(),
+      "stable_activation_double_backward_cpu",
+      [&]() {
+        stable_activation_double_backward_kernel_impl<scalar_t, IsTanh, IsSilu>(iter);
+      });
+}
+
+void sigmoid_double_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_double_backward_kernel<false, false>(iter);
+}
+
+void tanh_double_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_double_backward_kernel<true, false>(iter);
+}
+
+void silu_double_backward_from_input_kernel(TensorIteratorBase& iter) {
+  stable_activation_double_backward_kernel<false, true>(iter);
+}
+
 void silu_backward_kernel(TensorIteratorBase& iter) {
   if (at::isReducedFloatingType(iter.dtype())) {
     AT_DISPATCH_REDUCED_FLOATING_TYPES(iter.dtype(), "silu_backward_cpu", [&]() {
@@ -1312,6 +1589,13 @@ void prelu_backward_kernel(TensorIterator& iter) {
 
 
 REGISTER_DISPATCH(hardsigmoid_stub, &hardsigmoid_kernel)
+REGISTER_DISPATCH(sigmoid_backward_from_input_stub, &sigmoid_backward_from_input_kernel)
+REGISTER_DISPATCH(tanh_backward_from_input_stub, &tanh_backward_from_input_kernel)
+REGISTER_DISPATCH(silu_backward_from_input_stub, &silu_backward_from_input_kernel)
+REGISTER_DISPATCH(sigmoid_double_backward_from_input_stub, &sigmoid_double_backward_from_input_kernel)
+REGISTER_DISPATCH(tanh_double_backward_from_input_stub, &tanh_double_backward_from_input_kernel)
+REGISTER_DISPATCH(silu_double_backward_from_input_stub, &silu_double_backward_from_input_kernel)
+REGISTER_DISPATCH(log_sigmoid_double_backward_from_input_stub, &log_sigmoid_double_backward_from_input_kernel)
 REGISTER_DISPATCH(hardsigmoid_backward_stub, &hardsigmoid_backward_kernel)
 REGISTER_DISPATCH(threshold_stub, &threshold_kernel)
 REGISTER_DISPATCH(leaky_relu_stub, &leaky_relu_kernel)
