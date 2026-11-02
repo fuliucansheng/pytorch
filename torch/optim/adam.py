@@ -472,6 +472,8 @@ def _single_tensor_adam(
                 exp_avg_sq.mul_(beta2).addcmul_(
                     grad, grad, value=cast(float, 1 - beta2)
                 )
+        elif capturable and isinstance(beta2, Tensor) and not beta2.is_cpu:
+            exp_avg_sq.mul_(beta2).addcmul_(grad, grad * (1 - beta2))
         else:
             exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)  # type: ignore[arg-type]
 
@@ -632,7 +634,12 @@ def _multi_tensor_adam(
     # treating it as a scalar.
     beta1_dict: DeviceDict | None = (  # type: ignore[attr-defined]
         {beta1.device: beta1}
-        if isinstance(beta1, Tensor) and str(beta1.device) != "cpu"
+        if isinstance(beta1, Tensor) and not beta1.is_cpu
+        else None
+    )
+    beta2_dict: DeviceDict | None = (  # type: ignore[attr-defined]
+        {beta2.device: beta2}
+        if isinstance(beta2, Tensor) and not beta2.is_cpu
         else None
     )
 
@@ -653,8 +660,11 @@ def _multi_tensor_adam(
         device = device_params[0].device
         if beta1_dict is not None and device not in beta1_dict:
             beta1_dict[device] = beta1.to(device=device, non_blocking=True)  # type: ignore[union-attr, attr-defined]
+        if beta2_dict is not None and device not in beta2_dict:
+            beta2_dict[device] = beta2.to(device=device, non_blocking=True)  # type: ignore[union-attr, attr-defined]
 
         device_beta1 = beta1_dict[device] if beta1_dict else beta1
+        device_beta2 = beta2_dict[device] if beta2_dict else beta2
 
         # Handle complex parameters
         if has_complex:
@@ -700,24 +710,30 @@ def _multi_tensor_adam(
                     )
 
         # Decay the first and second moment running average coefficient
-        # Use device beta1 if beta1 is a tensor to ensure all
-        # tensors are on the same device
-        torch._foreach_lerp_(
-            device_exp_avgs, device_grads, cast(float, 1 - device_beta1)
-        )
+        # Use device betas to keep all tensors on the same device.
+        if beta1_dict is not None:
+            torch._foreach_lerp_(
+                device_exp_avgs,
+                device_grads,
+                [1 - beta1_dict[device]] * len(device_params),
+            )
+        else:
+            torch._foreach_lerp_(
+                device_exp_avgs, device_grads, cast(float, 1 - device_beta1)
+            )
 
-        torch._foreach_mul_(device_exp_avg_sqs, beta2)
+        torch._foreach_mul_(device_exp_avg_sqs, device_beta2)
 
         # Due to the strictness of the _foreach_addcmul API, we can't have a single
         # tensor scalar as the scalar arg (only python number is supported there)
         # as a result, separate out the value mul
         # Filed https://github.com/pytorch/pytorch/issues/139795
-        if isinstance(beta2, torch.Tensor):
-            scaled_device_grads = torch._foreach_mul(device_grads, 1 - beta2)  # type: ignore[assignment]
+        if isinstance(device_beta2, torch.Tensor):
+            scaled_device_grads = torch._foreach_mul(device_grads, 1 - device_beta2)  # type: ignore[assignment]
             value = 1.0
         else:
             scaled_device_grads = device_grads  # type: ignore[assignment]
-            value = 1 - beta2
+            value = 1 - device_beta2
 
         torch._foreach_addcmul_(
             device_exp_avg_sqs, scaled_device_grads, device_grads, value
@@ -732,8 +748,19 @@ def _multi_tensor_adam(
         bias_correction2_sqrt: tuple[Tensor, ...] | list[Tensor]
 
         if capturable:
-            bias_correction1 = torch._foreach_pow(beta1, device_state_steps)  # type: ignore[arg-type]
-            bias_correction2 = torch._foreach_pow(beta2, device_state_steps)  # type: ignore[arg-type]
+            # Keep Tensor betas in tensor arguments to avoid scalar extraction during capture.
+            if beta1_dict is not None:
+                bias_correction1 = torch._foreach_pow(
+                    [beta1_dict[device]] * len(device_state_steps), device_state_steps
+                )
+            else:
+                bias_correction1 = torch._foreach_pow(beta1, device_state_steps)  # type: ignore[arg-type]
+            if beta2_dict is not None:
+                bias_correction2 = torch._foreach_pow(
+                    [beta2_dict[device]] * len(device_state_steps), device_state_steps
+                )
+            else:
+                bias_correction2 = torch._foreach_pow(beta2, device_state_steps)  # type: ignore[arg-type]
             # foreach_sub doesn't allow a scalar as the first arg
             torch._foreach_sub_(bias_correction1, 1)
             torch._foreach_sub_(bias_correction2, 1)
@@ -829,6 +856,9 @@ def _fused_adam(
 
     beta1 = _to_scalar(beta1)
     beta2 = _to_scalar(beta2)
+    device_betas = (isinstance(beta1, Tensor) and beta1.is_cuda) or (
+        isinstance(beta2, Tensor) and beta2.is_cuda
+    )
 
     grad_scale_dict: DeviceDict = (
         {grad_scale.device: grad_scale} if grad_scale is not None else {}
@@ -876,6 +906,36 @@ def _fused_adam(
             lr = lr_dict[device]
         torch._foreach_add_(device_state_steps, 1)
         func = torch._fused_adam_ if not decoupled_weight_decay else torch._fused_adamw_
+        device_beta1 = beta1
+        device_beta2 = beta2
+        if device_betas and device.type == "cuda":
+            device_beta1 = (
+                beta1.to(device=device, non_blocking=True)
+                if isinstance(beta1, Tensor)
+                else torch.scalar_tensor(beta1, device=device, dtype=torch.float64)
+            )
+            device_beta2 = (
+                beta2.to(device=device, non_blocking=True)
+                if isinstance(beta2, Tensor)
+                else torch.scalar_tensor(beta2, device=device, dtype=torch.float64)
+            )
+            operator = (
+                torch.ops.aten._fused_adam_
+                if not decoupled_weight_decay
+                else torch.ops.aten._fused_adamw_
+            )
+            func = (
+                operator.tensor_lr_betas
+                if isinstance(lr, Tensor)
+                else operator.tensor_betas
+            )
+        elif isinstance(beta1, Tensor) or isinstance(beta2, Tensor):
+            operator = (
+                torch.ops.aten._fused_adam_
+                if not decoupled_weight_decay
+                else torch.ops.aten._fused_adamw_
+            )
+            func = operator.tensor_lr if isinstance(lr, Tensor) else operator.default
         # pyrefly: ignore [no-matching-overload]
         func(
             device_params,
@@ -886,8 +946,8 @@ def _fused_adam(
             device_state_steps,
             amsgrad=amsgrad,
             lr=lr,  # type: ignore[arg-type]
-            beta1=beta1,
-            beta2=beta2,
+            beta1=device_beta1,
+            beta2=device_beta2,
             weight_decay=weight_decay,
             eps=eps,
             maximize=maximize,
