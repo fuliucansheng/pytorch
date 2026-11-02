@@ -1294,12 +1294,26 @@ void stable_activation_double_backward_kernel_impl(TensorIteratorBase& iter) {
   const auto vector_function = [](Vec gradient, Vec grad_output, Vec input) {
     const Vec one(1);
     const auto magnitude = input.abs();
-    const auto quarter =
-        (magnitude.neg() * Vec(IsTanh ? 0.5 : 0.25)).exp();
-    const auto square = quarter * quarter;
-    const auto exponential = square * square;
+    const auto product = gradient * grad_output;
+    bool ordinary = false;
+    if constexpr (!IsSilu && std::is_same_v<scalar_t, opmath_t>) {
+      const Vec lower(std::is_same_v<opmath_t, double> ? 1e-100 : 1e-10);
+      const Vec upper(std::is_same_v<opmath_t, double> ? 1e100 : 1e10);
+      const auto safe = (magnitude >= lower) &
+          (magnitude <= Vec(std::is_same_v<opmath_t, double> ? 64 : 16)) &
+          (product.abs() >= lower) & (product.abs() <= upper);
+      ordinary = !safe.zero_mask();
+    }
+    Vec quarter(0);
+    Vec exponential(0);
+    if (ordinary) {
+      exponential = (magnitude.neg() * Vec(IsTanh ? 2 : 1)).exp();
+    } else {
+      quarter = (magnitude.neg() * Vec(IsTanh ? 0.5 : 0.25)).exp();
+      const auto square = quarter * quarter;
+      exponential = square * square;
+    }
     const auto reciprocal = one / (one + exponential);
-    const auto factor = Vec(IsTanh ? 2 : 1) * quarter * reciprocal;
     auto centered = (one - exponential) * reciprocal;
     const auto argument = magnitude * Vec(IsTanh ? 1 : 0.5);
     const auto near_zero = argument < Vec(std::is_same_v<opmath_t, double> ? 0.0625 : 0.125);
@@ -1314,7 +1328,11 @@ void stable_activation_double_backward_kernel_impl(TensorIteratorBase& iter) {
     const auto signed_centered = Vec::blendv(centered, centered.neg(), input < Vec(0));
     const auto coefficient = IsTanh ? Vec(-2) * signed_centered
         : IsSilu ? Vec(2) - magnitude * centered : signed_centered.neg();
-    const auto product = gradient * grad_output;
+    if (ordinary) {
+      return ((product * (Vec(IsTanh ? 4 : 1) * exponential * reciprocal)) *
+              reciprocal) * coefficient;
+    }
+    const auto factor = Vec(IsTanh ? 2 : 1) * quarter * reciprocal;
     const auto finite_product =
         (product.abs() < Vec(std::numeric_limits<opmath_t>::infinity())) &
         ((product != Vec(0)) | (gradient == Vec(0)) | (grad_output == Vec(0)));
@@ -1331,12 +1349,25 @@ void stable_activation_double_backward_kernel_impl(TensorIteratorBase& iter) {
       [](scalar_t gradient, scalar_t grad_output, scalar_t input) -> scalar_t {
     const opmath_t value = opmath_t(input);
     const opmath_t magnitude = std::abs(value);
-    const opmath_t quarter =
-        std::exp(-magnitude * opmath_t(IsTanh ? 0.5 : 0.25));
-    const opmath_t square = quarter * quarter;
-    const opmath_t exponential = square * square;
+    const opmath_t product = opmath_t(gradient) * opmath_t(grad_output);
+    bool ordinary = false;
+    if constexpr (!IsSilu && std::is_same_v<scalar_t, opmath_t>) {
+      const opmath_t lower = std::is_same_v<opmath_t, double> ? 1e-100 : 1e-10;
+      const opmath_t upper = std::is_same_v<opmath_t, double> ? 1e100 : 1e10;
+      ordinary = magnitude >= lower &&
+          magnitude <= opmath_t(std::is_same_v<opmath_t, double> ? 64 : 16) &&
+          std::abs(product) >= lower && std::abs(product) <= upper;
+    }
+    opmath_t quarter = 0;
+    opmath_t exponential;
+    if (ordinary) {
+      exponential = std::exp(-magnitude * opmath_t(IsTanh ? 2 : 1));
+    } else {
+      quarter = std::exp(-magnitude * opmath_t(IsTanh ? 0.5 : 0.25));
+      const opmath_t square = quarter * quarter;
+      exponential = square * square;
+    }
     const opmath_t reciprocal = 1 / (1 + exponential);
-    const opmath_t factor = opmath_t(IsTanh ? 2 : 1) * quarter * reciprocal;
     const opmath_t argument = magnitude * opmath_t(IsTanh ? 1 : 0.5);
     const opmath_t argument_square = argument * argument;
     const opmath_t centered = argument < opmath_t(std::is_same_v<opmath_t, double> ? 0.0625 : 0.125)
@@ -1348,7 +1379,12 @@ void stable_activation_double_backward_kernel_impl(TensorIteratorBase& iter) {
     const opmath_t signed_centered = value < 0 ? -centered : centered;
     const opmath_t coefficient = IsTanh ? -2 * signed_centered
         : IsSilu ? 2 - magnitude * centered : -signed_centered;
-    const opmath_t product = opmath_t(gradient) * opmath_t(grad_output);
+    if (ordinary) {
+      return static_cast<scalar_t>(
+          ((product * (opmath_t(IsTanh ? 4 : 1) * exponential * reciprocal)) *
+           reciprocal) * coefficient);
+    }
+    const opmath_t factor = opmath_t(IsTanh ? 2 : 1) * quarter * reciprocal;
     if (std::isfinite(product) &&
         (product != 0 || gradient == scalar_t(0) || grad_output == scalar_t(0))) {
       return static_cast<scalar_t>(
