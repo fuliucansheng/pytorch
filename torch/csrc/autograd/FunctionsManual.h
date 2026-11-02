@@ -207,6 +207,34 @@ at::Tensor logsumexp_backward(
     at::Tensor result,
     at::IntArrayRef dim,
     bool keepdim);
+at::Tensor log_softmax_backward(
+    const at::Tensor& grad,
+    const at::Tensor& output,
+    int64_t dim,
+    at::ScalarType input_dtype,
+    const at::Tensor& reduced_input = at::Tensor());
+at::Tensor log_softmax_reduced_input(const at::Tensor& input);
+at::Tensor log_softmax_jvp(
+    const at::Tensor& self_p,
+    const at::Tensor& self_t,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_grad_output(
+    const at::Tensor& grad,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_output(
+    const at::Tensor& grad,
+    const at::Tensor& grad_output,
+    const at::Tensor& output,
+    int64_t dim);
+at::Tensor log_softmax_backward_jvp(
+    const at::Tensor& grad_output_p,
+    const at::Tensor& grad_output_t,
+    const at::Tensor& output_p,
+    const at::Tensor& output_t,
+    int64_t dim,
+    at::ScalarType input_dtype);
 at::Tensor logsumexp_jvp(
     const at::Tensor& self_p,
     const at::Tensor& self_t,
@@ -466,6 +494,58 @@ at::Tensor glu_double_backward_grad_output(
     const at::Tensor& grad,
     const at::Tensor& input,
     int64_t dim);
+at::Tensor sigmoid_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& input,
+    const at::Tensor& output);
+std::tuple<at::Tensor, at::Tensor> product_scan_jvp_backward(
+    const at::Tensor& grad_product,
+    const at::Tensor& grad_derivative,
+    const at::Tensor& primal,
+    const at::Tensor& tangent,
+    const at::Tensor& product,
+    const at::Tensor& derivative,
+    int64_t dim,
+    const std::optional<at::Tensor>& groups);
+at::Tensor product_scan_jvp_forward(
+    const at::Tensor& primal,
+    const at::Tensor& primal_t,
+    const at::Tensor& tangent,
+    const at::Tensor& tangent_t,
+    int64_t dim,
+    const std::optional<at::Tensor>& groups);
+at::Tensor tanh_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& input,
+    const at::Tensor& output);
+at::Tensor sigmoid_double_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& grad_output,
+    const at::Tensor& input);
+at::Tensor tanh_double_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& grad_output,
+    const at::Tensor& input);
+at::Tensor silu_double_backward_from_input(
+    const at::Tensor& grad,
+    const at::Tensor& grad_output,
+    const at::Tensor& input);
+at::Tensor sigmoid_backward_from_input_jvp(
+    const at::Tensor& grad_output,
+    const at::Tensor& grad_output_t,
+    const at::Tensor& input,
+    const at::Tensor& input_t);
+at::Tensor tanh_backward_from_input_jvp(
+    const at::Tensor& grad_output,
+    const at::Tensor& grad_output_t,
+    const at::Tensor& input,
+    const at::Tensor& input_t);
+at::Tensor silu_backward_from_input_jvp(
+    const at::Tensor& grad_output,
+    const at::Tensor& grad_output_t,
+    const at::Tensor& input,
+    const at::Tensor& input_t);
+
 at::Tensor infinitely_differentiable_silu_backward(
     const at::Tensor& grad_output,
     const at::Tensor& input);
@@ -1148,7 +1228,7 @@ std::tuple<Tensor, Tensor> _cudnn_convolution_backward(
 Tensor scatter_reduce_jvp(
     const Tensor& self_p,
     const Tensor& self_t,
-    int dim,
+    int64_t dim,
     const Tensor& index,
     const Tensor& src_p,
     const Tensor& src_t,

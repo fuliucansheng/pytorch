@@ -7,10 +7,11 @@ import unittest.mock
 from collections import defaultdict
 
 import yaml
-from tools.autograd import gen_autograd_functions, load_derivatives
+from tools.autograd import gen_autograd_functions, gen_variable_type, load_derivatives
 from tools.pyi.gen_pyi import generate_type_hints
 
 from torchgen import dest
+from torchgen.api.autograd import NativeFunctionWithDifferentiabilityInfo
 from torchgen.api.python import PythonSignatureGroup, signature
 from torchgen.api.types import CppSignatureGroup, DispatcherSignature
 from torchgen.context import native_function_manager
@@ -66,6 +67,99 @@ class TestGenPyi(unittest.TestCase):
 
 
 class TestCreateDerivative(unittest.TestCase):
+    def test_saved_reduced_log_softmax_input(self) -> None:
+        schema = FunctionSchema.parse("func(Tensor self) -> Tensor")
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        derivative = load_derivatives.create_derivative(
+            native_function,
+            formula="func_backward(grad, log_softmax_reduced_input(self), result)",
+            var_names=("self",),
+            available_named_gradients=[],
+        )
+        self.assertEqual(
+            derivative.formula,
+            "func_backward(grad, self_log_softmax_reduced_input, result)",
+        )
+        self.assertEqual(len(derivative.saved_inputs), 1)
+        self.assertEqual(
+            derivative.saved_inputs[0].nctype.name, "self_log_softmax_reduced_input"
+        )
+        self.assertEqual(
+            derivative.saved_inputs[0].expr,
+            "torch::autograd::generated::details::log_softmax_reduced_input(self)",
+        )
+
+    def test_saved_reduced_log_softmax_input_grad_guard(self) -> None:
+        specification = (
+            "_log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor"
+        )
+        schema = FunctionSchema.parse(specification)
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        _, differentiability_info = load_derivatives.create_differentiability_info(
+            defn_dict={
+                "name": specification,
+                "dispatch": {
+                    "Default": {
+                        "self": "log_softmax_backward(grad, result, dim, self.scalar_type(), log_softmax_reduced_input(self))",
+                    },
+                },
+            },
+            functions_by_signature={schema.signature(): [native_function]},
+            functions_by_schema={specification: native_function},
+            op_counter=typing.Counter[str](),
+            used_dispatch_keys=set(),
+        )
+        body = "\n".join(
+            gen_variable_type.emit_body(
+                NativeFunctionWithDifferentiabilityInfo(
+                    func=native_function,
+                    info=differentiability_info,
+                    fw_derivatives=None,
+                ),
+                key="Default",
+            )
+        )
+        expression = (
+            "torch::autograd::generated::details::log_softmax_reduced_input(self)"
+        )
+        self.assertEqual(body.count(expression), 1)
+        self.assertIn(f"SavedVariable({expression}, false)", body)
+        self.assertLess(body.index("if (_any_requires_grad)"), body.index(expression))
+        self.assertLess(
+            body.index(expression), body.index("at::AutoDispatchBelowADInplaceOrView")
+        )
+        self.assertNotIn("SavedVariable(self_log_softmax_reduced_input,", body)
+
+    def test_saved_input_clone(self) -> None:
+        schema = FunctionSchema.parse("func(Tensor self) -> Tensor")
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        derivative = load_derivatives.create_derivative(
+            native_function,
+            formula="func_backward(grad, self.clone(), result)",
+            var_names=("self",),
+            available_named_gradients=[],
+        )
+        self.assertEqual(derivative.formula, "func_backward(grad, self_clone, result)")
+        self.assertEqual(len(derivative.saved_inputs), 1)
+        self.assertEqual(derivative.saved_inputs[0].nctype.name, "self_clone")
+        self.assertEqual(derivative.saved_inputs[0].expr, "self.clone()")
+        self.assertEqual(derivative.saved_outputs[0].nctype.name, "result")
+
+    def test_saved_input_and_clone_are_distinct(self) -> None:
+        schema = FunctionSchema.parse("func(Tensor self) -> Tensor")
+        native_function = dataclasses.replace(DEFAULT_NATIVE_FUNCTION, func=schema)
+        derivative = load_derivatives.create_derivative(
+            native_function,
+            formula="func_backward(grad, self, self.clone())",
+            var_names=("self",),
+            available_named_gradients=[],
+        )
+        saved = {
+            attribute.nctype.name: attribute.expr
+            for attribute in derivative.saved_inputs
+        }
+        self.assertEqual(saved, {"self": "self", "self_clone": "self.clone()"})
+
     def test_named_grads(self) -> None:
         schema = FunctionSchema.parse(
             "func(Tensor a, Tensor b) -> (Tensor x, Tensor y)"

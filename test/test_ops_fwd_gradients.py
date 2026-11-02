@@ -77,7 +77,6 @@ class TestFwdGradients(TestGradients):
             skip("pca_lowrank", dtypes=(torch.complex128,)),
             xfail("polar"),
             xfail("logcumsumexp", dtypes=(torch.complex128,)),
-            xfail("scatter_reduce", variant_name="prod"),
             xfail("linalg.norm", variant_name="subgradients_at_zero"),
         }
     )
@@ -145,7 +144,6 @@ class TestFwdGradients(TestGradients):
             xfail("logcumsumexp", dtypes=(torch.complex128,)),
             xfail("nn.functional.feature_alpha_dropout", variant_name="with_train"),
             skip("nn.functional.multi_head_attention_forward"),
-            xfail("scatter_reduce", variant_name="prod"),
             xfail("linalg.norm", variant_name="subgradients_at_zero"),
         }
     )
@@ -163,7 +161,6 @@ class TestFwdGradients(TestGradients):
             xfail("as_strided", variant_name="partial_views"),
             xfail("nn.functional.rrelu"),
             xfail("nn.functional.feature_alpha_dropout", variant_name="with_train"),
-            xfail("scatter_reduce", variant_name="prod"),
         }
     )
     @_gradcheck_ops(op_db)

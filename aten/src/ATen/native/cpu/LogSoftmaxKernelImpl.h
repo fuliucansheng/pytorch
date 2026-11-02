@@ -42,6 +42,31 @@ int64_t vec_log_softmax_lastdim_chunk_size(int64_t grain_size, int64_t outer_siz
 }
 
 template <typename scalar_t>
+inline at::opmath_type<scalar_t> stable_log_softmax_normalizer(
+    const scalar_t* data,
+    int64_t size,
+    int64_t stride,
+    at::opmath_type<scalar_t> maximum,
+    at::opmath_type<scalar_t> normalizer) {
+  using opmath_t = at::opmath_type<scalar_t>;
+  if (!(normalizer >= opmath_t(0) && normalizer < opmath_t(0.69314718055994530942)) ||
+      !std::isfinite(maximum)) {
+    return normalizer;
+  }
+  opmath_t tail_sum = 0;
+  bool removed_maximum = false;
+  for (const auto index : c10::irange(size)) {
+    const opmath_t value = opmath_t(data[index * stride]);
+    if (!removed_maximum && value == maximum) {
+      removed_maximum = true;
+    } else {
+      tail_sum += std::exp(value - maximum);
+    }
+  }
+  return std::log1p(tail_sum);
+}
+
+template <typename scalar_t>
 void serial_vec_log_softmax_lastdim_range(
     const scalar_t* input_data_base,
     scalar_t* output_data_base,
@@ -87,8 +112,10 @@ void serial_vec_log_softmax_lastdim_range(
       int64_t i = ii + j;
       const scalar_t* input_data = input_data_base + i * dim_size;
       scalar_t* output_data = output_data_base + i * dim_size;
-      scalar_t tmp_sum = tmp_sum_scalar[j];
       scalar_t max_input = max_input_arr[j];
+      scalar_t tmp_sum = stable_log_softmax_normalizer(
+          input_data, dim_size, 1, at::opmath_type<scalar_t>(max_input),
+          at::opmath_type<scalar_t>(tmp_sum_scalar[j]));
 
       // It's necessary to keep the order of the operations below.
       // In some cases that input is large digits and the difference
@@ -199,6 +226,14 @@ serial_vec_logsoftmax_range(
 
     // apply log
     vec::map([](Vec x) { return x.log(); }, tmp_sum_data, tmp_sum_data, size);
+
+    for (const auto column : c10::irange(size)) {
+      const scalar_t* input_column = input_data_base +
+          outer_idx * dim_size * inner_size + inner_idx_begin + column;
+      tmp_sum_data[column] = stable_log_softmax_normalizer(
+          input_column, dim_size, inner_size, input_max_data[column],
+          tmp_sum_data[column]);
+    }
 
     // compute x - max - sum
     for (int64_t dim_idx = 0; dim_idx < dim_size; dim_idx++) {
@@ -318,6 +353,14 @@ serial_vec_logsoftmax_range(
 
     // apply log
     vec::map([](fVec x) { return x.log(); }, tmp_sum_data, tmp_sum_data, size);
+
+    for (const auto column : c10::irange(size)) {
+      const scalar_t* input_column = input_data_base +
+          outer_idx * dim_size * inner_size + inner_idx_begin + column;
+      tmp_sum_data[column] = stable_log_softmax_normalizer(
+          input_column, dim_size, inner_size, input_max_data[column],
+          tmp_sum_data[column]);
+    }
 
     // compute x - max - sum
     for (int64_t dim_idx = 0; dim_idx < dim_size; dim_idx++) {

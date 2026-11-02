@@ -7,6 +7,7 @@
 #include <ATen/native/layer_norm.h>
 #include <ATen/NestedTensorImpl.h>
 #include <ATen/native/nested/NestedTensorUtils.h>
+#include <ATen/ops/_silu_backward_from_input_native.h>
 
 #include <c10/util/irange.h>
 #include <utility>
@@ -186,6 +187,15 @@ Tensor threshold_backwards_nested(const Tensor& grad_output, const Tensor& input
 Tensor silu_backward_nested(const Tensor& grad_output, const Tensor& self){
     auto partial_silu_backward = [](auto && PH1, auto && PH2) { return at::silu_backward(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); };
     return map_nt_binary(grad_output, self, partial_silu_backward);
+}
+
+Tensor stable_silu_backward_nested(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  return map_nt_binary(
+      grad_output, input, [](const Tensor& gradient, const Tensor& value) {
+        return at::_silu_backward_from_input(gradient, value);
+      });
 }
 
 std::tuple<Tensor, Tensor, Tensor> layer_norm_backward_nested(

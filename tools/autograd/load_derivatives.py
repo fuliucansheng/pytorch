@@ -34,6 +34,7 @@ from torchgen.api.types import (
     SymIntT,
     tensorGeometryT,
     tensorOptionsT,
+    tensorT,
     typeAndSizeT,
     VectorCType,
 )
@@ -785,6 +786,21 @@ def saved_variables(
         return f'strides_or_error({name}, "{name}")'
 
     REPLACEMENTS: list[tuple[str, dict[str, Any]]] = [
+        (
+            r"log_softmax_reduced_input\({}\)",
+            {
+                "suffix": "_log_softmax_reduced_input",
+                "nctype": lambda name: NamedCType(name, BaseCType(tensorT)),
+                "expr": lambda name: f"torch::autograd::generated::details::log_softmax_reduced_input({name})",
+            },
+        ),
+        (
+            r"{}.clone\(\)",
+            {
+                "suffix": "_clone",
+                "nctype": lambda name: NamedCType(name, BaseCType(tensorT)),
+            },
+        ),
         # replace self.sym_sizes() with self_sym_sizes
         (
             r"{}.sym_sizes\(\)",

@@ -13402,6 +13402,350 @@ class TestAutogradForwardMode(TestCase):
 class TestAutogradDeviceType(TestCase):
     hw_classification = HardwareClassification.ACCELERATOR
 
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_scaled_backward(self, device, dtype, activation):
+        magnitudes = [40, 740, 1100] if activation == "sigmoid" else [20, 370, 500]
+        for magnitude in magnitudes:
+            for sign in [-1, 1]:
+                value = sign * magnitude
+                exponential = math.exp(
+                    -abs(value) * (0.5 if activation == "sigmoid" else 1)
+                )
+                root = (
+                    (1 if activation == "sigmoid" else 2)
+                    * exponential
+                    / (1 + exponential * exponential)
+                )
+                for cotangent in [1e308, 1.0, 1e-308]:
+                    for layout in ["scalar", "vector", "noncontiguous"]:
+                        with self.subTest(
+                            value=value, cotangent=cotangent, layout=layout
+                        ):
+                            shape = (
+                                ()
+                                if layout == "scalar"
+                                else (257 if layout == "vector" else 18,)
+                            )
+                            input = torch.full(shape, value, device=device, dtype=dtype)
+                            if layout == "noncontiguous":
+                                input = input[::2]
+                            input.requires_grad_()
+                            output = getattr(torch, activation)(input)
+                            gradient = torch.full_like(input, cotangent)
+                            if layout == "noncontiguous":
+                                gradient = torch.full(
+                                    (2 * input.numel(),),
+                                    cotangent,
+                                    device=device,
+                                    dtype=dtype,
+                                )[::2]
+                                self.assertFalse(gradient.is_contiguous())
+                                self.assertEqual(gradient.stride(), (2,))
+                            (derivative,) = torch.autograd.grad(output, input, gradient)
+                            expected = (cotangent * root) * root
+                            if expected != 0:
+                                self.assertTrue(bool((derivative != 0).all()))
+                            minimum_subnormal = (
+                                torch.finfo(dtype).tiny * torch.finfo(dtype).eps
+                            )
+                            tolerance = (
+                                2 * minimum_subnormal
+                                if abs(expected) < torch.finfo(dtype).tiny
+                                else 0
+                            )
+                            self.assertEqual(
+                                derivative,
+                                torch.full_like(input, expected),
+                                rtol=4e-13,
+                                atol=tolerance,
+                            )
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    @parametrize("tangent_source", ["input", "cotangent"])
+    def test_snapshot_activation_backward_forward_tangent(
+        self, device, dtype, activation, tangent_source
+    ):
+        input = torch.tensor(
+            [-40.0, -1.0, 0.0, 1.0, 40.0],
+            device=device,
+            dtype=dtype,
+            requires_grad=True,
+        )
+        cotangent = torch.linspace(0.5, 1.5, input.numel(), device=device, dtype=dtype)
+        tangent = torch.full_like(input, 0.75)
+        with torch.autograd.forward_ad.dual_level():
+            primal = (
+                torch.autograd.forward_ad.make_dual(input, tangent)
+                if tangent_source == "input"
+                else input
+            )
+            gradient = (
+                torch.autograd.forward_ad.make_dual(cotangent, tangent)
+                if tangent_source == "cotangent"
+                else cotangent
+            )
+            output = getattr(torch, activation)(primal)
+            (derivative,) = torch.autograd.grad(
+                output, primal, gradient, create_graph=False
+            )
+            actual = torch.autograd.forward_ad.unpack_dual(derivative).tangent
+            self.assertIsNotNone(actual)
+            exponential = torch.exp(
+                -input.abs() * (0.5 if activation == "sigmoid" else 1)
+            )
+            root = (
+                (1 if activation == "sigmoid" else 2)
+                * exponential
+                / (1 + exponential.square())
+            )
+            expected = (tangent * root) * root
+            if tangent_source == "input":
+                balance = (
+                    1 - 2 * input.sigmoid()
+                    if activation == "sigmoid"
+                    else -2 * input.tanh()
+                )
+                expected = ((tangent * cotangent * balance) * root) * root
+            self.assertEqual(actual, expected, rtol=4e-13, atol=0)
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_tail_derivatives(self, device, dtype, activation):
+        function = getattr(torch, activation)
+        magnitudes = (
+            [20, 40, 80, 350, 700, 740]
+            if activation == "sigmoid"
+            else [10, 20, 40, 80, 175, 350, 370]
+        )
+        minimum_subnormal = torch.finfo(dtype).tiny * torch.finfo(dtype).eps
+        for magnitude in magnitudes:
+            for sign in [-1, 1]:
+                value = sign * magnitude
+                with self.subTest(value=value):
+                    input = torch.tensor(
+                        value, device=device, dtype=dtype, requires_grad=True
+                    )
+                    exponential = math.exp(
+                        -abs(value) * (0.5 if activation == "sigmoid" else 1)
+                    )
+                    denominator = 1 + exponential * exponential
+                    root = (
+                        exponential
+                        / denominator
+                        * (1 if activation == "sigmoid" else 2)
+                    )
+                    slope = root * root
+                    if activation == "sigmoid":
+                        sigmoid = exponential * root if value < 0 else 1 / denominator
+                        balance = 1 - 2 * sigmoid
+                        coefficients = [1, balance, balance * balance - 2 * slope]
+                    else:
+                        tanh = math.tanh(value)
+                        coefficients = [1, -2 * tanh, 6 * tanh * tanh - 2]
+                    derivative = function(input)
+                    for coefficient in coefficients:
+                        (derivative,) = torch.autograd.grad(
+                            derivative, input, create_graph=True
+                        )
+                        expected = (coefficient * root) * root
+                        if expected != 0:
+                            self.assertTrue(derivative.item() != 0)
+                        tolerance = (
+                            2 * minimum_subnormal
+                            if abs(expected) < torch.finfo(dtype).tiny
+                            else 0
+                        )
+                        self.assertEqual(
+                            derivative,
+                            torch.tensor(expected, device=device, dtype=dtype),
+                            rtol=4e-13,
+                            atol=tolerance,
+                        )
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_backward_dispatch_mode(
+        self, device, dtype, activation
+    ):
+        from torch.utils._python_dispatch import TorchDispatchMode
+
+        class CaptureMode(TorchDispatchMode):
+            def __init__(self):
+                self.operations = []
+
+            def __torch_dispatch__(self, function, types, args=(), kwargs=None):
+                self.operations.append(function)
+                return function(*args, **(kwargs or {}))
+
+        input = torch.tensor(
+            [-40.0, -1.0, 0.0, 1.0, 40.0],
+            device=device,
+            dtype=dtype,
+            requires_grad=True,
+        )
+        output = getattr(torch, activation)(input)
+        with CaptureMode() as mode:
+            (derivative,) = torch.autograd.grad(output, input, torch.ones_like(output))
+        self.assertIn(torch.ops.aten.where.self, mode.operations)
+        exponential = torch.exp(-input.abs() * (0.5 if activation == "sigmoid" else 1))
+        root = (
+            (1 if activation == "sigmoid" else 2)
+            * exponential
+            / (1 + exponential.square())
+        )
+        self.assertEqual(derivative, root.square(), rtol=4e-13, atol=0)
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_backward_negative_view(
+        self, device, dtype, activation
+    ):
+        input = torch.tensor(
+            [-40.0, -1.0, 0.0, 1.0, 40.0],
+            device=device,
+            dtype=dtype,
+            requires_grad=True,
+        )
+        output = getattr(torch, activation)(input)
+        cotangent = torch._neg_view(torch.ones_like(input))
+        self.assertTrue(cotangent.is_neg())
+        (derivative,) = torch.autograd.grad(output, input, cotangent)
+        exponential = torch.exp(-input.abs() * (0.5 if activation == "sigmoid" else 1))
+        root = (
+            (1 if activation == "sigmoid" else 2)
+            * exponential
+            / (1 + exponential.square())
+        )
+        self.assertEqual(derivative, -root.square(), rtol=4e-13, atol=0)
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_origin_higher_orders(self, device, dtype, activation):
+        expected = (
+            [0.25, 0, -0.125, 0, 0.25, 0]
+            if activation == "sigmoid"
+            else [1, 0, -2, 0, 16, 0]
+        )
+        input = torch.zeros((), device=device, dtype=dtype, requires_grad=True)
+        derivative = getattr(torch, activation)(input)
+        for reference in expected:
+            (derivative,) = torch.autograd.grad(derivative, input, create_graph=True)
+            self.assertEqual(
+                derivative,
+                torch.tensor(reference, device=device, dtype=dtype),
+                rtol=4e-13,
+                atol=0,
+            )
+
+    @dtypes(torch.float64, torch.complex128)
+    @parametrize("activation", ["sigmoid", "tanh"])
+    def test_snapshot_activation_mutation_compatibility(
+        self, device, dtype, activation
+    ):
+        function = getattr(torch, activation)
+        value = 0.25 + 0.15j if dtype.is_complex else 0.25
+        reference = torch.tensor(value, device=device, dtype=dtype, requires_grad=True)
+        (expected,) = torch.autograd.grad(
+            function(reference),
+            reference,
+            torch.ones_like(reference),
+            create_graph=True,
+        )
+        (expected_second,) = torch.autograd.grad(
+            expected, reference, torch.ones_like(reference)
+        )
+        input = reference.detach().clone().requires_grad_()
+        result = function(input)
+        with torch.no_grad():
+            input.add_(3)
+        (actual,) = torch.autograd.grad(
+            result, input, torch.ones_like(input), create_graph=True
+        )
+        (actual_second,) = torch.autograd.grad(actual, input, torch.ones_like(input))
+        self.assertEqual(actual, expected, rtol=4e-13, atol=0)
+        self.assertEqual(actual_second, expected_second, rtol=4e-13, atol=0)
+        input = reference.detach().clone().requires_grad_()
+        result = function(input)
+        with torch.no_grad():
+            result.add_(0.125)
+        with self.assertRaisesRegex(RuntimeError, "modified by an inplace operation"):
+            torch.autograd.grad(result, input, torch.ones_like(input))
+        input = reference.detach().clone().requires_grad_()
+        nonleaf = input.clone()
+        result = getattr(nonleaf, activation + "_")()
+        (actual,) = torch.autograd.grad(
+            result, input, torch.ones_like(input), create_graph=True
+        )
+        (actual_second,) = torch.autograd.grad(actual, input, torch.ones_like(input))
+        self.assertEqual(actual, expected, rtol=4e-13, atol=0)
+        self.assertEqual(actual_second, expected_second, rtol=4e-13, atol=0)
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["logsigmoid", "silu"])
+    def test_stable_activation_tail_derivatives(self, device, dtype, activation):
+        function = getattr(nn.functional, activation)
+        magnitudes = [37.42994775023705, 40.410841513445845, 80, 350, 700, 740]
+        minimum_subnormal = torch.finfo(dtype).tiny * torch.finfo(dtype).eps
+        for magnitude in magnitudes:
+            for sign in [-1, 1]:
+                value = sign * magnitude
+                with self.subTest(value=value):
+                    input = torch.tensor(
+                        value, device=device, dtype=dtype, requires_grad=True
+                    )
+                    (first,) = torch.autograd.grad(
+                        function(input), input, create_graph=True
+                    )
+                    (second,) = torch.autograd.grad(first, input, create_graph=True)
+                    (third,) = torch.autograd.grad(second, input)
+                    half_exponential = math.exp(-abs(value) * 0.5)
+                    denominator = 1 + half_exponential * half_exponential
+                    root = half_exponential / denominator
+                    sigmoid = half_exponential * root if value < 0 else 1 / denominator
+                    balance = 1 - 2 * sigmoid
+                    if activation == "logsigmoid":
+                        expected_second = -root * root
+                        expected_third = (-balance * root) * root
+                    else:
+                        expected_second = ((2 + value * balance) * root) * root
+                        coefficient = 3 * balance + value * (
+                            balance * balance - 2 * root * root
+                        )
+                        expected_third = (coefficient * root) * root
+                    for actual, expected in [
+                        (second, expected_second),
+                        (third, expected_third),
+                    ]:
+                        reference = torch.tensor(expected, device=device, dtype=dtype)
+                        if reference.item() != 0:
+                            self.assertTrue(actual.item() != 0)
+                        tolerance = (
+                            2 * minimum_subnormal
+                            if abs(expected) < torch.finfo(dtype).tiny
+                            else 0
+                        )
+                        self.assertEqual(actual, reference, rtol=4e-13, atol=tolerance)
+
+    @dtypes(torch.float64)
+    @parametrize("activation", ["logsigmoid", "silu"])
+    def test_stable_activation_origin_higher_orders(self, device, dtype, activation):
+        expected = {
+            "logsigmoid": [0.5, -0.25, 0, 0.125, 0, -0.25],
+            "silu": [0.5, 0.5, 0, -0.5, 0, 1.5],
+        }[activation]
+        input = torch.zeros((), device=device, dtype=dtype, requires_grad=True)
+        derivative = getattr(nn.functional, activation)(input)
+        for reference in expected:
+            (derivative,) = torch.autograd.grad(derivative, input, create_graph=True)
+            self.assertEqual(
+                derivative,
+                torch.tensor(reference, device=device, dtype=dtype),
+                rtol=4e-13,
+                atol=0,
+            )
+
     def test_min_max_aminmax_median_backprops_to_all_values(self, device):
         # 1) Test min/max/median/nanmedian on both a non NaN and all NaN tensor
         for f in [torch.min, torch.max, torch.median, torch.nanmedian]:

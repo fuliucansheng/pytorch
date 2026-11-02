@@ -1550,8 +1550,29 @@
   result: auto_linear
 
 - name: sigmoid(Tensor self) -> Tensor
-  self: sigmoid_backward(grad, result)
-  result: auto_element_wise
+  self: sigmoid_backward_from_input(grad, self.clone(), result)
+  result: sigmoid_backward_from_input(self_t.conj(), self_p, result).conj()
+
+- name: _product_scan_jvp(Tensor primal, Tensor tangent, int dim, Tensor? groups=None) -> (Tensor product, Tensor derivative)
+  primal, tangent: product_scan_jvp_backward(grads[0], grads[1], primal, tangent, product, derivative, dim, groups)
+  groups: non_differentiable
+  product: "primal_t.defined() ? std::get<1>(at::_product_scan_jvp(primal_p, primal_t, dim, groups)) : zeros_like(product)"
+  derivative: product_scan_jvp_forward(primal_p, primal_t, tangent_p, tangent_t, dim, groups)
+
+- name: _sigmoid_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  grad_output: _sigmoid_backward_from_input(grad, input)
+  input: sigmoid_double_backward_from_input(grad, grad_output, input)
+  result: sigmoid_backward_from_input_jvp(grad_output_p, grad_output_t, input_p, input_t)
+
+- name: _tanh_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  grad_output: _tanh_backward_from_input(grad, input)
+  input: tanh_double_backward_from_input(grad, grad_output, input)
+  result: tanh_backward_from_input_jvp(grad_output_p, grad_output_t, input_p, input_t)
+
+- name: _silu_backward_from_input(Tensor grad_output, Tensor input) -> Tensor
+  grad_output: _silu_backward_from_input(grad, input)
+  input: silu_double_backward_from_input(grad, grad_output, input)
+  result: silu_backward_from_input_jvp(grad_output_p, grad_output_t, input_p, input_t)
 
 - name: logit(Tensor self, float? eps=None) -> Tensor
   self: "GradMode::is_enabled() ? infinitely_differentiable_logit_backward(grad, self, eps) : logit_backward(grad, self, eps)"
@@ -1788,8 +1809,8 @@
   result: auto_element_wise
 
 - name: tanh(Tensor self) -> Tensor
-  self: tanh_backward(grad, result)
-  result: auto_element_wise
+  self: tanh_backward_from_input(grad, self.clone(), result)
+  result: tanh_backward_from_input(self_t.conj(), self_p, result).conj()
 
 - name: topk(Tensor self, SymInt k, int dim=-1, bool largest=True, bool sorted=True) -> (Tensor values, Tensor indices)
   self: value_selecting_reduction_backward_symint(grad, dim, indices, self.sym_sizes(), true)
@@ -2136,7 +2157,7 @@
   result: auto_element_wise
 
 - name: silu(Tensor self) -> Tensor
-  self: "GradMode::is_enabled() ? infinitely_differentiable_silu_backward(grad, self) : silu_backward(grad, self)"
+  self: infinitely_differentiable_silu_backward(grad, self)
   result: auto_element_wise
 
 - name: mish(Tensor self) -> Tensor
@@ -2201,8 +2222,8 @@
   output_differentiability: [True, False]
 
 - name: _log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor
-  self: _log_softmax_backward_data(grad, result, dim, self.scalar_type())
-  result: self_t - logsumexp_jvp(self_p, self_t, {dim}, true)
+  self: log_softmax_backward(grad, result, dim, self.scalar_type(), log_softmax_reduced_input(self))
+  result: log_softmax_jvp(self_p, self_t, result, dim)
 
 - name: _sparse_log_softmax(Tensor self, int dim, bool half_to_float) -> Tensor
   self: _sparse_log_softmax_backward_data(grad, result, dim, self)
@@ -2542,8 +2563,9 @@
   result: log_sigmoid_backward(grad_output_t, self_p, buffer) + log_sigmoid_double_backward(self_t * grad_output_p, self_p)
 
 - name: _log_softmax_backward_data(Tensor grad_output, Tensor output, int dim, ScalarType input_dtype) -> Tensor
-  grad_output: grad.to(output.dtype()) - (grad.to(output.dtype()) * output.exp()).sum(dim, true)
-  output: (-grad_output.sum(dim, true) * output.exp() * grad.to(output.dtype())).to(output.dtype())
+  grad_output: log_softmax_backward_grad_output(grad, output, dim)
+  output: log_softmax_backward_output(grad, grad_output, output, dim)
+  result: log_softmax_backward_jvp(grad_output_p, grad_output_t, output_p, output_t, dim, input_dtype)
 
 - name: leaky_relu_backward(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result) -> Tensor
   # self_is_result is always false here since double backward call is an out-of-place call, self is input itself
