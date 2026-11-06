@@ -46,9 +46,13 @@ def checked_path(path):
 
 
 def validate_name(name):
-    if not name or not name.isascii() or any(
-        ord(character) < 32 or ord(character) == 127 or character in '\\:<>"|?*~'
-        for character in name
+    if (
+        not name
+        or not name.isascii()
+        or any(
+            ord(character) < 32 or ord(character) == 127 or character in '\\:<>"|?*~'
+            for character in name
+        )
     ):
         raise ValueError(f"Unsafe or ambiguous Windows path: {name!r}")
     parts = name.split("/")
@@ -100,9 +104,7 @@ def archive_layout(archive):
                 directories.add(node)
         if not member.is_dir():
             files[name] = member
-    records = [
-        name for name in files if re.fullmatch(r"[^/]+\.dist-info/RECORD", name)
-    ]
+    records = [name for name in files if re.fullmatch(r"[^/]+\.dist-info/RECORD", name)]
     if len(records) != 1:
         raise ValueError("Expected exactly one top-level wheel RECORD")
     record = records[0]
@@ -111,7 +113,9 @@ def archive_layout(archive):
         if f"{metadata_directory}/{leaf}" not in files:
             raise ValueError(f"Missing wheel metadata: {leaf}")
     if any(name.endswith(("/RECORD.jws", "/RECORD.p7s")) for name in files):
-        raise ValueError("Stale RECORD signatures must be removed upstream, not silently copied")
+        raise ValueError(
+            "Stale RECORD signatures must be removed upstream, not silently copied"
+        )
     return files, directories, record
 
 
@@ -172,9 +176,7 @@ def validate_review(review, wheel_digest):
         if not isinstance(review.get(field), str) or not review[field].strip():
             raise ValueError(f"Missing explicit reviewer input: {field}")
     profile = review.get("profile_eku", "")
-    if not re.fullmatch(
-        r"1\.3\.6\.1\.4\.1\.311\.97\.(?:[0-9]+\.)+[0-9]+", profile
-    ):
+    if not re.fullmatch(r"1\.3\.6\.1\.4\.1\.311\.97\.(?:[0-9]+\.)+[0-9]+", profile):
         raise ValueError("A full Public Trust certificate-profile EKU is required")
     if profile == GENERIC_EKU:
         raise ValueError("The generic Public Trust EKU does not identify a profile")
@@ -218,7 +220,9 @@ def prepare(wheel, review, workspace, inspect):
     wheel = checked_path(wheel)
     workspace = checked_path(workspace)
     if workspace.exists() or not workspace.parent.is_dir():
-        raise ValueError("Preparation requires a new workspace in an existing directory")
+        raise ValueError(
+            "Preparation requires a new workspace in an existing directory"
+        )
     wheel_identity = digest_file(wheel)
     targets = validate_review(review, wheel_identity["sha256"])
     with zipfile.ZipFile(wheel) as archive:
@@ -255,7 +259,9 @@ def prepare(wheel, review, workspace, inspect):
                     or signature.get("status") != "NotSigned"
                     or signature.get("signer")
                 ):
-                    raise ValueError(f"Only unsigned reviewed PyTorch PE targets may change: {name}")
+                    raise ValueError(
+                        f"Only unsigned reviewed PyTorch PE targets may change: {name}"
+                    )
             else:
                 problem = verification_error(signature)
                 if not is_pe or problem:
@@ -356,9 +362,12 @@ def repack(workspace, expected_digest, output, inspect):
                         continue
                     digest = hashlib.sha256()
                     size = 0
-                    with checked_path(tree / name).open("rb") as source, archive.open(
-                        zip_info(name, original), "w", force_zip64=True
-                    ) as destination:
+                    with (
+                        checked_path(tree / name).open("rb") as source,
+                        archive.open(
+                            zip_info(name, original), "w", force_zip64=True
+                        ) as destination,
+                    ):
                         for block in iter(lambda: source.read(CHUNK_SIZE), b""):
                             destination.write(block)
                             digest.update(block)
@@ -387,7 +396,11 @@ def repack(workspace, expected_digest, output, inspect):
             if not complete:
                 raw.close()
                 output.unlink()
-    return {"output": output.name, **digest_file(output), "verified_signatures": signatures}
+    return {
+        "output": output.name,
+        **digest_file(output),
+        "verified_signatures": signatures,
+    }
 
 
 def main():

@@ -52,7 +52,12 @@ def mock_inspect(path):
         return mock_valid()
     if path.read_bytes().endswith(MOCK_SIGNING_MARKER):
         return mock_valid(PROFILE)
-    return {"status": "NotSigned", "signer": None, "timestamp": None, "signtool_exit_code": 1}
+    return {
+        "status": "NotSigned",
+        "signer": None,
+        "timestamp": None,
+        "signtool_exit_code": 1,
+    }
 
 
 class WheelAuthenticodeTests(TestCase):
@@ -79,13 +84,24 @@ class WheelAuthenticodeTests(TestCase):
         with warnings.catch_warnings(), zipfile.ZipFile(wheel, "w") as archive:
             warnings.simplefilter("ignore", UserWarning)
             for name, payload in members + list(extras):
-                archive.writestr(name, payload)
+                if isinstance(name, str):
+                    member = zipfile.ZipInfo(name)
+                    member.filename = name
+                else:
+                    member = name
+                archive.writestr(member, payload)
         review = {
             "wheel_sha256": TOOL.digest_file(wheel)["sha256"],
             "reviewed_by": "MOCK release reviewer",
             "profile_eku": PROFILE,
             "profile_eku_provenance": "MOCK approved mapping; no real service identity",
-            "targets": [{"path": TARGET, "owner": "PyTorch", "source_provenance": "https://example.invalid/reviewed-source"}],
+            "targets": [
+                {
+                    "path": TARGET,
+                    "owner": "PyTorch",
+                    "source_provenance": "https://example.invalid/reviewed-source",
+                }
+            ],
         }
         workspace = directory / "prepared"
         receipt = TOOL.prepare(wheel, review, workspace, inspector) if prepare else None
@@ -112,7 +128,11 @@ class WheelAuthenticodeTests(TestCase):
                     self.assertEqual((encoded, size), ("", ""))
                 else:
                     payload = archive.read(name)
-                    expected = base64.urlsafe_b64encode(hashlib.sha256(payload).digest()).rstrip(b"=").decode("ascii")
+                    expected = (
+                        base64.urlsafe_b64encode(hashlib.sha256(payload).digest())
+                        .rstrip(b"=")
+                        .decode("ascii")
+                    )
                     self.assertEqual(encoded, "sha256=" + expected)
                     self.assertEqual(size, str(len(payload)))
                     self.assertNotIn("=", encoded.removeprefix("sha256="))
@@ -120,10 +140,18 @@ class WheelAuthenticodeTests(TestCase):
     @parametrize(
         "variant",
         [
-            {"status": "NotSigned"}, {"status": "HashMismatch"},
-            {"timestamp": None}, {"signtool_exit_code": 1}, {"signtool_exit_code": 2},
+            {"status": "NotSigned"},
+            {"status": "HashMismatch"},
+            {"timestamp": None},
+            {"signtool_exit_code": 1},
+            {"signtool_exit_code": 2},
             {"signature_type": "Catalog"},
-            {"signer": {"subject": "Expected display name", "ekus": [TOOL.GENERIC_EKU]}},
+            {
+                "signer": {
+                    "subject": "Expected display name",
+                    "ekus": [TOOL.GENERIC_EKU],
+                }
+            },
             {"signer": {"ekus": [TOOL.PROFILE_PREFIX]}},
             {"signer": {"ekus": [PROFILE + ".1"]}},
         ],
@@ -134,14 +162,28 @@ class WheelAuthenticodeTests(TestCase):
         signature = {**mock_valid(PROFILE), **variant}
 
         def inspector(path):
-            return copy.deepcopy(signature) if path.name == "target.dll" else mock_inspect(path)
+            return (
+                copy.deepcopy(signature)
+                if path.name == "target.dll"
+                else mock_inspect(path)
+            )
 
         output = directory / "rejected.whl"
         with self.assertRaises(ValueError):
             TOOL.repack(workspace, receipt["manifest_sha256"], output, inspector)
         self.assertFalse(output.exists())
 
-    @parametrize("action", ["change_vendor", "change_data", "change_record", "add", "delete", "add_directory"])
+    @parametrize(
+        "action",
+        [
+            "change_vendor",
+            "change_data",
+            "change_record",
+            "add",
+            "delete",
+            "add_directory",
+        ],
+    )
     def test_non_target_mutations_and_file_set(self, action):
         directory, wheel, review, workspace, receipt = self.fixture()
         self.mark_mock_signed(workspace)
@@ -159,16 +201,29 @@ class WheelAuthenticodeTests(TestCase):
         else:
             (tree / "unexpected_directory").mkdir()
         with self.assertRaises(ValueError):
-            TOOL.repack(workspace, receipt["manifest_sha256"], directory / "out.whl", mock_inspect)
+            TOOL.repack(
+                workspace,
+                receipt["manifest_sha256"],
+                directory / "out.whl",
+                mock_inspect,
+            )
 
     def test_unsigned_dependencies_and_extra_pe_remain_unresolved(self):
         directory, wheel, review, workspace, receipt = self.fixture(
             extras=[("pkg/unknown.bin", PE), ("pkg/unsigned.dll", PE)]
         )
-        self.assertEqual({item["path"] for item in receipt["unresolved"]}, {"pkg/unknown.bin", "pkg/unsigned.dll"})
+        self.assertEqual(
+            {item["path"] for item in receipt["unresolved"]},
+            {"pkg/unknown.bin", "pkg/unsigned.dll"},
+        )
         self.mark_mock_signed(workspace)
         with self.assertRaises(ValueError):
-            TOOL.repack(workspace, receipt["manifest_sha256"], directory / "out.whl", mock_inspect)
+            TOOL.repack(
+                workspace,
+                receipt["manifest_sha256"],
+                directory / "out.whl",
+                mock_inspect,
+            )
 
     def test_already_signed_target_is_not_overwritten(self):
         directory, wheel, review, workspace, receipt = self.fixture(prepare=False)
@@ -179,10 +234,21 @@ class WheelAuthenticodeTests(TestCase):
     @parametrize(
         "field,value",
         [
-            ("wheel_sha256", "0" * 64), ("reviewed_by", ""),
-            ("profile_eku", TOOL.GENERIC_EKU), ("profile_eku", TOOL.PROFILE_PREFIX),
+            ("wheel_sha256", "0" * 64),
+            ("reviewed_by", ""),
+            ("profile_eku", TOOL.GENERIC_EKU),
+            ("profile_eku", TOOL.PROFILE_PREFIX),
             ("profile_eku_provenance", ""),
-            ("targets", [{"path": TARGET, "owner": "vendor", "source_provenance": "https://example.invalid"}]),
+            (
+                "targets",
+                [
+                    {
+                        "path": TARGET,
+                        "owner": "vendor",
+                        "source_provenance": "https://example.invalid",
+                    }
+                ],
+            ),
         ],
     )
     def test_review_requires_exact_wheel_ownership_and_full_profile(self, field, value):
@@ -195,14 +261,34 @@ class WheelAuthenticodeTests(TestCase):
     @parametrize(
         "name",
         [
-            "../escape", "/absolute", "C:/drive", "//host/share", "pkg\\backslash",
-            "pkg/file:stream", "pkg/CON.txt", "pkg/con .txt", "pkg/trailing.", "pkg/trailing ",
-            "pkg/PROGRA~1", "pkg/\u00e9.txt", "pkg//empty", "pkg/../parent", "pkg/./dot",
-            "PKG/new.txt", TARGET, "pkg", "pkg/vendor.dll/child", "pkg/dir//",
+            "../escape",
+            "/absolute",
+            "C:/drive",
+            "//host/share",
+            "pkg\\backslash",
+            "pkg/file:stream",
+            "pkg/CON.txt",
+            "pkg/con .txt",
+            "pkg/trailing.",
+            "pkg/trailing ",
+            "pkg/PROGRA~1",
+            "pkg/\u00e9.txt",
+            "pkg//empty",
+            "pkg/../parent",
+            "pkg/./dot",
+            "PKG/new.txt",
+            TARGET,
+            "pkg",
+            "pkg/vendor.dll/child",
+            "pkg/dir//",
         ],
     )
     def test_bad_member_names_and_collisions(self, name):
-        directory, wheel, review, workspace, receipt = self.fixture(extras=[(name, b"bad")], prepare=False)
+        directory, wheel, review, workspace, receipt = self.fixture(
+            extras=[(name, b"bad")], prepare=False
+        )
+        with zipfile.ZipFile(wheel) as archive:
+            self.assertEqual(archive.infolist()[-1].orig_filename, name)
         with self.assertRaises(ValueError):
             TOOL.prepare(wheel, review, workspace, mock_inspect)
         self.assertFalse(workspace.exists())
@@ -212,13 +298,17 @@ class WheelAuthenticodeTests(TestCase):
         member = zipfile.ZipInfo("pkg/link")
         member.create_system = 3
         member.external_attr = (mode | 0o777) << 16
-        directory, wheel, review, workspace, receipt = self.fixture(extras=[(member, b"destination")], prepare=False)
+        directory, wheel, review, workspace, receipt = self.fixture(
+            extras=[(member, b"destination")], prepare=False
+        )
         with self.assertRaises(ValueError):
             TOOL.prepare(wheel, review, workspace, mock_inspect)
 
     @parametrize("suffix", [".jws", ".p7s"])
     def test_stale_record_signatures(self, suffix):
-        directory, wheel, review, workspace, receipt = self.fixture(extras=[(RECORD + suffix, b"stale")], prepare=False)
+        directory, wheel, review, workspace, receipt = self.fixture(
+            extras=[(RECORD + suffix, b"stale")], prepare=False
+        )
         with self.assertRaises(ValueError):
             TOOL.prepare(wheel, review, workspace, mock_inspect)
 
@@ -233,11 +323,20 @@ class WheelAuthenticodeTests(TestCase):
         with self.assertRaises(ValueError):
             TOOL.repack(workspace, "0" * 64, directory / "out.whl", mock_inspect)
         manifest_path = workspace / "manifest.json"
-        manifest_path.write_text(manifest_path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+        manifest_path.write_text(
+            manifest_path.read_text(encoding="utf-8") + " ", encoding="utf-8"
+        )
         with self.assertRaises(ValueError):
-            TOOL.repack(workspace, receipt["manifest_sha256"], directory / "out.whl", mock_inspect)
+            TOOL.repack(
+                workspace,
+                receipt["manifest_sha256"],
+                directory / "out.whl",
+                mock_inspect,
+            )
 
-    @parametrize("name,mode", [("pkg/ambiguous/", stat.S_IFREG), ("pkg/ambiguous", stat.S_IFDIR)])
+    @parametrize(
+        "name,mode", [("pkg/ambiguous/", stat.S_IFREG), ("pkg/ambiguous", stat.S_IFDIR)]
+    )
     def test_inconsistent_directory_member_modes(self, name, mode):
         member = zipfile.ZipInfo(name)
         member.create_system = 3
@@ -263,18 +362,34 @@ class WheelAuthenticodeTests(TestCase):
         directory, wheel, review, workspace, receipt = self.fixture()
         self.mark_mock_signed(workspace)
         output = directory / "zip64.whl"
-        with mock.patch.object(zipfile, "ZIP64_LIMIT", 64), mock.patch.object(zipfile, "ZIP_FILECOUNT_LIMIT", 2):
+        with (
+            mock.patch.object(zipfile, "ZIP64_LIMIT", 64),
+            mock.patch.object(zipfile, "ZIP_FILECOUNT_LIMIT", 2),
+        ):
             TOOL.repack(workspace, receipt["manifest_sha256"], output, mock_inspect)
             with zipfile.ZipFile(output) as archive:
                 self.assertIsNone(archive.testzip())
-                self.assertTrue(any(member.extract_version >= 45 for member in archive.infolist()))
+                self.assertTrue(
+                    any(member.extract_version >= 45 for member in archive.infolist())
+                )
         self.assertIn(b"PK\x06\x06", output.read_bytes())
 
-    @parametrize("failure", [FileNotFoundError("MOCK missing PowerShell"), subprocess.CalledProcessError(1, "MOCK verifier")])
+    @parametrize(
+        "failure",
+        [
+            FileNotFoundError("MOCK missing PowerShell"),
+            subprocess.CalledProcessError(1, "MOCK verifier"),
+        ],
+    )
     def test_verifier_command_errors_are_not_swallowed(self, failure):
-        with mock.patch.object(TOOL.sys, "platform", "win32"), mock.patch.object(TOOL.subprocess, "run", side_effect=failure):
+        with (
+            mock.patch.object(TOOL.sys, "platform", "win32"),
+            mock.patch.object(TOOL.subprocess, "run", side_effect=failure),
+        ):
             with self.assertRaises(type(failure)):
-                TOOL.inspect_windows(self.root / "native.dll", self.root / "signtool.exe")
+                TOOL.inspect_windows(
+                    self.root / "native.dll", self.root / "signtool.exe"
+                )
 
     def test_explicit_directories_survive_without_record_rows(self):
         directory, wheel, review, workspace, receipt = self.fixture(
@@ -325,7 +440,12 @@ class WheelAuthenticodeTests(TestCase):
             return signature
 
         with self.assertRaises(ValueError):
-            TOOL.repack(workspace, receipt["manifest_sha256"], directory / "out.whl", mutating_inspector)
+            TOOL.repack(
+                workspace,
+                receipt["manifest_sha256"],
+                directory / "out.whl",
+                mutating_inspector,
+            )
 
 
 instantiate_parametrized_tests(WheelAuthenticodeTests)
