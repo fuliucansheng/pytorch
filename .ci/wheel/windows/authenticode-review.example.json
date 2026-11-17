@@ -1,0 +1,13 @@
+{
+  "wheel_sha256": "REPLACE_WITH_EXACT_INPUT_SHA256",
+  "reviewed_by": "REPLACE_WITH_HUMAN_REVIEWER",
+  "profile_eku": "REPLACE_WITH_FULL_PROFILE_SPECIFIC_EKU",
+  "profile_eku_provenance": "REPLACE_WITH_TRUSTED_PROFILE_TO_FULL_EKU_MAPPING",
+  "targets": [
+    {
+      "path": "torch/lib/caffe2_nvrtc.dll",
+      "owner": "PyTorch",
+      "source_provenance": "https://github.com/pytorch/pytorch/blob/REVIEWED_IMMUTABLE_REVISION/caffe2/CMakeLists.txt"
+    }
+  ]
+}
