@@ -1346,11 +1346,39 @@ def _view_meta(
         return typing_cast(
             FakeTensor, _view_unbacked_meta(a, shape, allow_copy=allow_copy)
         )
-    else:
-        return typing_cast(
-            FakeTensor,
-            torch._refs._reshape_view_helper(a, *shape, allow_copy=allow_copy),
-        )
+    result = typing_cast(
+        FakeTensor, torch._refs._reshape_view_helper(a, *shape, allow_copy=allow_copy)
+    )
+    if allow_copy or func not in (aten.view.default, aten._unsafe_view.default):
+        return result
+
+    sizes = result.shape
+    if (
+        any(isinstance(size, torch.SymInt) for size in sizes)
+        or 1 not in sizes
+        or 0 in sizes
+    ):
+        return result
+
+    from torch.fx.experimental.symbolic_shapes import statically_known_true
+
+    strides = list(result.stride())
+    changed = False
+    for dimension in range(len(sizes) - 1, -1, -1):
+        if sizes[dimension] != 1:
+            continue
+        if dimension + 1 < len(sizes):
+            stride = sizes[dimension + 1] * strides[dimension + 1]
+        else:
+            stride = a.stride(-1) if a.ndim else 1
+        if not statically_known_true(strides[dimension] == stride):
+            strides[dimension] = stride
+            changed = True
+    return (
+        typing_cast(FakeTensor, result.as_strided(sizes, strides))
+        if changed
+        else result
+    )
 
 
 @register_op_impl(aten.view_copy.default)
