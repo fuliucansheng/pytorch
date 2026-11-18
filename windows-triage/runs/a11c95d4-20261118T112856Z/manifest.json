@@ -1,0 +1,2912 @@
+{
+  "schema_version": 1,
+  "run_id": "a11c95d4-20261118T112856Z",
+  "generated_at": "2026-11-18T11:42:55.513490Z",
+  "scope": "Coordination/filter/history audit and durable registry only; independent Windows owners remain responsible for their issue outcomes.",
+  "source_assignment": {
+    "artifact_id": "chat-assignment",
+    "file_sha256": "044d901be35d4562a79e2b825d550cccf013933965067213e99fc6bff6fee32f",
+    "workspace_execution_id": "0c527ba5-819e-4773-8e2f-c2f67dd3e7c1",
+    "user_message_id": "2b918703-da1e-47a3-968c-962211668773"
+  },
+  "repository": "fuliucansheng/pytorch",
+  "upstream_read_only": "pytorch/pytorch",
+  "branch": "msbeacon/windows-issue-registry",
+  "registry_url": "https://github.com/fuliucansheng/pytorch/tree/msbeacon/windows-issue-registry/windows-triage",
+  "manifest_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/runs/a11c95d4-20261118T112856Z/manifest.json",
+  "window": {
+    "start": "2026-11-16T11:28:56Z",
+    "end": "2026-11-18T11:28:56Z",
+    "inclusive": true
+  },
+  "query": "repo:pytorch/pytorch is:issue created:2026-11-16T11:28:56Z..2026-11-18T11:28:56Z",
+  "broad_query": "repo:pytorch/pytorch is:issue created:2026-11-16T11:28:56Z..2026-11-18T11:28:56Z is:open windows",
+  "initial_scan_provenance": {
+    "source": "Orchestrator assignment; independently confirmed by authenticated worker search at 2026-11-18T11:36:25Z through 11:36:33Z",
+    "discovered": 79,
+    "open": 74,
+    "closed": 5,
+    "broad_hits": 34,
+    "native_windows": 6,
+    "skips": 2,
+    "owner_requests": 4
+  },
+  "counts": {
+    "discovered": 79,
+    "returned": 79,
+    "incomplete_results": false,
+    "open_at_discovery": 74,
+    "closed_at_discovery": 5,
+    "broad_windows_hits": 34,
+    "native_windows_open_reports_at_discovery": 6,
+    "native_windows_reports_currently_open": 6,
+    "preexisting_processing_skipped": 2,
+    "owner_execution_requests_already_made_by_orchestrator": 4,
+    "new_assignments_dispatched_by_this_execution": 0,
+    "additional_eligible_unprocessed_candidates": 0,
+    "open_issues_without_native_windows_report": 68,
+    "generic_bot_windows_hits": 26,
+    "comments_retained": 58,
+    "commented_open_issues_checked": 42,
+    "category_counts": {
+      "no_native_windows_report": 37,
+      "generic_bot_platform_boilerplate": 26,
+      "closed": 5,
+      "specific_exclusion": 5,
+      "assigned_execution_request": 4,
+      "preexisting_processing_skip": 2
+    },
+    "owner_status_counts_point_in_time": {
+      "Pending": 2,
+      "Assigned": 1,
+      "Investigating": 1
+    },
+    "coordination_reproductions": 0,
+    "coordination_code_fixes": 0,
+    "coordination_windows_test_runs": 0,
+    "coordination_prs_created": 0
+  },
+  "audit_method": "Retained complete 79-item search metadata; checked all 34 broad hits and all comments on open discovery issues with comments; inspected native-Windows indicators and exclusion context; checked fork PRs in all states, branches, relevant upstream PR number searches and issue timelines. No issue code was executed.",
+  "authenticated_access": {
+    "login": "fuliucansheng",
+    "login_observed_at": "2026-11-18T11:37:30.608744Z",
+    "fork_parent": "pytorch/pytorch",
+    "fork_default_branch": "main",
+    "fork_permissions": {
+      "admin": true,
+      "maintain": true,
+      "push": true,
+      "triage": true,
+      "pull": true
+    },
+    "upstream_read_http_status": 200
+  },
+  "history": {
+    "fork_pr_state_filter": "all",
+    "fork_pull_count": 19,
+    "fork_pagination_complete": true,
+    "fork_branch_count_initial": 27,
+    "initial_registry_http_status": 404,
+    "per_issue": [
+      {
+        "issue_number": 205275,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205275 in:title,body",
+        "upstream_pr_total_count": 0,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [],
+        "timeline_references": [],
+        "observed_at": "2026-11-18T11:37:56.398860Z"
+      },
+      {
+        "issue_number": 205276,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205276 in:title,body",
+        "upstream_pr_total_count": 0,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [],
+        "timeline_references": [],
+        "observed_at": "2026-11-18T11:38:00.727898Z"
+      },
+      {
+        "issue_number": 205291,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205291 in:title,body",
+        "upstream_pr_total_count": 1,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [
+          "https://github.com/pytorch/pytorch/pull/205407"
+        ],
+        "timeline_references": [
+          "https://github.com/pytorch/pytorch/pull/205407"
+        ],
+        "observed_at": "2026-11-18T11:38:05.431327Z"
+      },
+      {
+        "issue_number": 205292,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205292 in:title,body",
+        "upstream_pr_total_count": 0,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [],
+        "timeline_references": [],
+        "observed_at": "2026-11-18T11:38:10.142329Z"
+      },
+      {
+        "issue_number": 205293,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205293 in:title,body",
+        "upstream_pr_total_count": 0,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [],
+        "timeline_references": [],
+        "observed_at": "2026-11-18T11:38:14.543033Z"
+      },
+      {
+        "issue_number": 205495,
+        "fork_pull_matches": [],
+        "upstream_pr_query": "repo:pytorch/pytorch is:pr 205495 in:title,body",
+        "upstream_pr_total_count": 0,
+        "upstream_pr_incomplete_results": false,
+        "upstream_pr_matches": [],
+        "timeline_references": [],
+        "observed_at": "2026-11-18T11:38:18.864948Z"
+      }
+    ],
+    "prior_backend_directory_checks": "Orchestrator reported root/.github/.agents directory listings and registry/issue-number searches with no matching older registry; attributed prior observation only."
+  },
+  "skipped_issues": [
+    {
+      "schema_version": 1,
+      "record_type": "preexisting_processing",
+      "issue_number": 205291,
+      "issue_url": "https://github.com/pytorch/pytorch/issues/205291",
+      "processed": true,
+      "decision": "skip",
+      "recorded_by_run": "a11c95d4-20261118T112856Z",
+      "source_observed_at": "2026-11-18T11:38:22.113422Z",
+      "recorded_at": "2026-11-18T11:40:34.794216Z",
+      "new_fix_validated_in_this_run": false,
+      "source_url": "https://github.com/pytorch/pytorch/pull/205407",
+      "skip_reason": "Preexisting upstream draft fix PR explicitly references this issue and reports Windows investigation and tests. Skip without reinvestigation or independent validation.",
+      "source_evidence_key": "history/preexisting-pr-205407",
+      "source_state": {
+        "state": "open",
+        "draft": true,
+        "merged": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "record_type": "preexisting_processing",
+      "issue_number": 205495,
+      "issue_url": "https://github.com/pytorch/pytorch/issues/205495",
+      "processed": true,
+      "decision": "skip",
+      "recorded_by_run": "a11c95d4-20261118T112856Z",
+      "source_observed_at": "2026-11-18T11:38:17.549050Z",
+      "recorded_at": "2026-11-18T11:40:36.846574Z",
+      "new_fix_validated_in_this_run": false,
+      "source_url": "https://github.com/pytorch/pytorch/issues/205495",
+      "skip_reason": "Issue body already contains AI-assisted investigation and candidate fix, a candidate regression test, before/after results and two reported reviews. Treat as preexisting processing; do not reinvestigate or assert a merged fix.",
+      "source_evidence_key": "issue/205495",
+      "source_section": "AI-assisted investigation and candidate fix"
+    }
+  ],
+  "owner_mapping_and_observations": [
+    {
+      "issue_number": 205275,
+      "worker": "DESKTOP-3O9Q5CE",
+      "worker_id": "a2dc0d9c-d09a-416d-9911-7f156dcce1f5",
+      "assignment": "a11c95d4-20261118-205275",
+      "observed_at": "2026-11-18T11:42:48.627936Z",
+      "record_http_status": 404,
+      "record_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205275.json",
+      "report_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205275.md",
+      "report_observed_at": "2026-11-18T11:42:49.043041Z",
+      "report_http_status": 404,
+      "durable_claim_observed": false,
+      "status": "Pending",
+      "observation": "not-yet-observed",
+      "processed": null,
+      "observed_assignment": null,
+      "assignment_match": null,
+      "record_blob_sha": null,
+      "record": null
+    },
+    {
+      "issue_number": 205276,
+      "worker": "DESKTOP-5IP0SN3",
+      "worker_id": "7697faa7-1081-48db-8d5b-515dd9df9c86",
+      "assignment": "a11c95d4-20261118-205276",
+      "observed_at": "2026-11-18T11:42:49.520335Z",
+      "record_http_status": 200,
+      "record_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205276.json",
+      "report_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205276.md",
+      "report_observed_at": "2026-11-18T11:42:49.963438Z",
+      "report_http_status": 404,
+      "durable_claim_observed": true,
+      "status": "Assigned",
+      "observation": "registry_record_observed",
+      "processed": false,
+      "observed_assignment": null,
+      "assignment_match": null,
+      "record_blob_sha": "3144436a37f8e290749b022984d160ca8ff03f21",
+      "record": {
+        "issue_number": 205276,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/205276",
+        "run_key": "a11c95d4-20261118T112856Z",
+        "assignment_key": "a11c95d4-20261118-205276",
+        "owner_worker_id": "7697faa7-1081-48db-8d5b-515dd9df9c86",
+        "window_start": "2026-11-16T11:28:56Z",
+        "window_end": "2026-11-18T11:28:56Z",
+        "schema_version": 1,
+        "title": "`cross_entropy` on CPU accepts an `int32` (and a `bool`) target under `torch.compile` that eager rejects, while rejecting a `uint8` target that eager accepts",
+        "issue_created_at": "2026-11-17T10:46:13Z",
+        "issue_state": "open",
+        "owner_github_login": "fuliucansheng",
+        "status": "Assigned",
+        "processed": false,
+        "assigned_at": "2026-11-18T11:42:13.406946+00:00",
+        "updated_at": "2026-11-18T11:42:13.406946+00:00",
+        "history_checks_completed_at": "2026-11-18T11:38:16.587998+00:00",
+        "status_history": [
+          {
+            "status": "Assigned",
+            "at": "2026-11-18T11:42:13.406946+00:00",
+            "note": "Authenticated history reviewed; atomic claim before reproduction."
+          }
+        ]
+      }
+    },
+    {
+      "issue_number": 205292,
+      "worker": "DESKTOP-QBOG748",
+      "worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+      "assignment": "a11c95d4-20261118-205292",
+      "observed_at": "2026-11-18T11:42:50.460325Z",
+      "record_http_status": 200,
+      "record_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205292.json",
+      "report_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205292.md",
+      "report_observed_at": "2026-11-18T11:42:50.864579Z",
+      "report_http_status": 404,
+      "durable_claim_observed": true,
+      "status": "Investigating",
+      "observation": "registry_record_observed",
+      "processed": false,
+      "observed_assignment": null,
+      "assignment_match": null,
+      "record_blob_sha": "50d37d7f41ac5af36dead3bbe3daaeb5fe833585",
+      "record": {
+        "schema_version": 1,
+        "issue_number": 205292,
+        "source": {
+          "url": "https://github.com/pytorch/pytorch/issues/205292",
+          "state": "open",
+          "title": "`unique`, `unique_consecutive`, `bincount`, `nonzero` and `masked_select` on an empty tensor built inside the compiled function fail to compile",
+          "created_at": "2026-11-17T12:43:41Z",
+          "updated_at": "2026-11-17T19:05:32Z",
+          "comments": 0,
+          "labels": [
+            "triaged",
+            "needs research",
+            "oncall: pt2",
+            "module: dynamic shapes",
+            "module: inductor",
+            "topic: fuzzer"
+          ],
+          "body_sha256": "f3321f76a3ff4088f21b306cbd8d34f6fb8e3d907d88bf98a584dab3d1706bd9"
+        },
+        "creation_window": {
+          "start": "2026-11-16T11:28:56Z",
+          "end": "2026-11-18T11:28:56Z"
+        },
+        "run_key": "a11c95d4-20261118T112856Z",
+        "assignment_key": "a11c95d4-20261118-205292",
+        "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+        "status": "Investigating",
+        "processed": false,
+        "assigned_at": "2026-11-18T11:40:59.882Z",
+        "updated_at": "2026-11-18T11:41:35.041Z",
+        "history_preflight": {
+          "complete": true,
+          "source": "results/history-preflight.json",
+          "summary": "results/history-summary.json",
+          "no_issue_specific_pr_found": true
+        },
+        "status_history": [
+          {
+            "status": "Assigned",
+            "timestamp": "2026-11-18T11:40:59.882Z",
+            "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+            "note": "Authenticated issue/comments/timeline/PR and central-registry preflight complete."
+          },
+          {
+            "status": "Investigating",
+            "timestamp": "2026-11-18T11:41:35.041Z",
+            "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+            "note": "Durable atomic claim verified; beginning isolated native Windows environment discovery."
+          }
+        ]
+      }
+    },
+    {
+      "issue_number": 205293,
+      "worker": "ProArt5090",
+      "worker_id": "5372afcf-9ee3-4fc5-8e19-fd45d410a42e",
+      "assignment": "a11c95d4-20261118-205293",
+      "observed_at": "2026-11-18T11:42:51.285786Z",
+      "record_http_status": 404,
+      "record_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205293.json",
+      "report_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205293.md",
+      "report_observed_at": "2026-11-18T11:42:51.727094Z",
+      "report_http_status": 404,
+      "durable_claim_observed": false,
+      "status": "Pending",
+      "observation": "not-yet-observed",
+      "processed": null,
+      "observed_assignment": null,
+      "assignment_match": null,
+      "record_blob_sha": null,
+      "record": null
+    }
+  ],
+  "current_windows_issue_states": [
+    {
+      "issue_number": 205275,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:52.401417Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205275"
+    },
+    {
+      "issue_number": 205276,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:52.968406Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205276"
+    },
+    {
+      "issue_number": 205291,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:53.568072Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205291"
+    },
+    {
+      "issue_number": 205292,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:54.246643Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205292"
+    },
+    {
+      "issue_number": 205293,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:54.862511Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205293"
+    },
+    {
+      "issue_number": 205495,
+      "state": "open",
+      "observed_at": "2026-11-18T11:42:55.443732Z",
+      "url": "https://github.com/pytorch/pytorch/issues/205495"
+    }
+  ],
+  "additional_candidates": [],
+  "issue_audit": [
+    {
+      "issue_number": 205128,
+      "url": "https://github.com/pytorch/pytorch/issues/205128",
+      "title": "[Inductor] upsample_trilinear3d.default fails to compile with CI=1 despite having a registered decomposition",
+      "created_at": "2026-11-16T12:06:01Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "actionable",
+        "oncall: pt2",
+        "module: decompositions",
+        "module: inductor"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "bba0a69e5bc0e3e16ced97be5cfa319f807bac898f1da5e6a44de5a42a3d42c9",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205128",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205130,
+      "url": "https://github.com/pytorch/pytorch/issues/205130",
+      "title": "DISABLED test_a_hook_returning_none_keeps_the_default_decision (__main__.MultiTemplateFusionDecisionGpuTest)",
+      "created_at": "2026-11-16T12:55:29Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: rocm",
+        "triaged",
+        "module: flaky-tests",
+        "skipped",
+        "oncall: pt2",
+        "module: inductor"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "06be987efdbd5fd761d86564d853757464396b6ad1722d77214d3e6ca3c6a034",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205130",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205130#issuecomment-6917011489",
+          "comment_id": 6917011489,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205130` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205131,
+      "url": "https://github.com/pytorch/pytorch/issues/205131",
+      "title": "DISABLED test_remove_noop_slice_negative_start_cuda (__main__.GPUTests)",
+      "created_at": "2026-11-16T12:55:32Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: tests",
+        "triaged",
+        "module: flaky-tests",
+        "skipped",
+        "module: fx",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "9886ea13c26d3a0f9f7a30796aadf47dc337e61020d3fc970f8bf57c2a46306c",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205131",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205131#issuecomment-6917012999",
+          "comment_id": 6917012999,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205131` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205132,
+      "url": "https://github.com/pytorch/pytorch/issues/205132",
+      "title": "DISABLED test_remove_noop_slice_scatter_negative_start_cuda (__main__.GPUTests)",
+      "created_at": "2026-11-16T12:55:35Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: tests",
+        "triaged",
+        "module: flaky-tests",
+        "skipped",
+        "module: fx",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 3,
+      "retained_comment_count": 3,
+      "body_sha256": "2076b071d7f8276b5cd52e0e68e909ed25e978db7e1cc5ec8dfc975c7c4c276c",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205132",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205132#issuecomment-6917014243",
+          "comment_id": 6917014243,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205132` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205134,
+      "url": "https://github.com/pytorch/pytorch/issues/205134",
+      "title": "Tensor.apply_ / Tensor.map_ do not bump the version counter: backward silently uses the overwritten saved tensor",
+      "created_at": "2026-11-16T13:33:29Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: autograd",
+        "low priority",
+        "module: correctness (silent)",
+        "bot-triaged",
+        "release triage"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "04112af5f2647533b2cde58a7e9008a54f147d510d8f13e9be503953d85211da",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205134",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205135,
+      "url": "https://github.com/pytorch/pytorch/issues/205135",
+      "title": "[inductor] 'MultiOutput' object has no attribute 'data' when a TemplateBuffer.build_multi_outputs output is returned and also used",
+      "created_at": "2026-11-16T14:15:25Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "oncall: pt2",
+        "module: inductor",
+        "module: helion",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "83cf7061e97e2076ca30d01efe9922862300d43092043b360ddc08f827d5a862",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205135",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205138,
+      "url": "https://github.com/pytorch/pytorch/issues/205138",
+      "title": "[SymmMem] Source builds no longer find NVSHMEM installed as a pip wheel (`NVSHMEM_PY_DIR` is never set)",
+      "created_at": "2026-11-16T14:38:00Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: build",
+        "triaged",
+        "module: regression",
+        "has workaround",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "e6cc78e98c131329cbda8d035f9e1d2daf4e7365011df0f068bd0bbc542515f1",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205138",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205143,
+      "url": "https://github.com/pytorch/pytorch/issues/205143",
+      "title": "NIXL transport: no public passive progress with background progress disabled",
+      "created_at": "2026-11-16T15:37:59Z",
+      "state_at_discovery": "closed",
+      "labels": [
+        "oncall: distributed",
+        "triaged",
+        "module: deadlock",
+        "function request",
+        "bot-triaged",
+        "oncall: distributed infra"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "closed",
+      "rationale": "Closed at frozen discovery; excluded before Windows triage.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 0,
+      "body_sha256": "8a1a2ac9f621ef5b17bb0e96b62ff8b87de474b1c1b8b917f16987951413d0a6",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205143",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205150,
+      "url": "https://github.com/pytorch/pytorch/issues/205150",
+      "title": "[Inductor] KeyError: 'complex64' when mutating an as_strided view of a cloned complex tensor",
+      "created_at": "2026-11-16T16:38:52Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: complex",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "ea2abf14a5e8ed72c63ba437792381da883f05937b6aa2a8f623a423fda4835e",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205150",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205157,
+      "url": "https://github.com/pytorch/pytorch/issues/205157",
+      "title": "[Inductor] Returning nested unfold views breaks output aliasing",
+      "created_at": "2026-11-16T17:26:02Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: correctness (silent)",
+        "module: viewing and reshaping",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "78637982bbb032b2553843437db437a600e78c8f0f4c492a86cb681ea2e5cceb",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205157",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205158,
+      "url": "https://github.com/pytorch/pytorch/issues/205158",
+      "title": "torch.compile: ==, != and in/.get on identity-hashed objects return a stale result for different objects",
+      "created_at": "2026-11-16T17:28:05Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "actionable",
+        "module: correctness (silent)",
+        "oncall: pt2",
+        "module: dynamo",
+        "module: guards",
+        "bot-triaged",
+        "dynamo-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "8f18f25be17070fc348aa1148d88f3de4cca0d5a62170d914bc7206cd749ad3d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205158",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205159,
+      "url": "https://github.com/pytorch/pytorch/issues/205159",
+      "title": "[Inductor/AOTAutograd] Internal bool views trigger mixed _base states assertion across a graph break",
+      "created_at": "2026-11-16T17:41:12Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "oncall: pt2",
+        "module: aotdispatch",
+        "module: pt2-dispatcher",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "b3cab64e3bd41dfb0cc6939d7a563bf46966768102b2b1e855c4f08c48b38fed",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205159",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205164,
+      "url": "https://github.com/pytorch/pytorch/issues/205164",
+      "title": "[inductor] Outputs of a multi-output template kernel (Helion) stay allocated until the compiled graph returns",
+      "created_at": "2026-11-16T18:25:25Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: memory usage",
+        "triaged",
+        "oncall: pt2",
+        "module: inductor",
+        "module: helion",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "8d03a570f592ebd7d23218fa00aaa50407542f4c6b3ed37863d6d249916d2f5a",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205164",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205201,
+      "url": "https://github.com/pytorch/pytorch/issues/205201",
+      "title": "`avg_pool2d` backward is wrong on CUDA for channels_last input when `padding > 0`",
+      "created_at": "2026-11-16T23:46:12Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: autograd",
+        "module: cuda",
+        "has workaround",
+        "module: memory format",
+        "module: correctness (silent)",
+        "module: pooling",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "specific_exclusion",
+      "rationale": "Drive-path regex matched a print-string ending in a colon and escaped newline, not a Windows path or OS report.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "63af85fbf411056896ec15241cbe639dde249571cbef1e9d7784c2006a66048e",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205201",
+          "field": "title/body",
+          "excerpts": [
+            "(), a)\ngrad_b, = torch.autograd.grad((pool(b) * w).sum(), b)\nprint(\"backward equal:\", torch.allclose(grad_a, grad_b))\nprint(\"gradient, contiguous input:\\n\", grad_a)\nprint(\"gradient, channels_last input:\\n\", grad_b)\n```\n\nOutput:\n\n```\ncpu  torch.contiguous_format  gradcheck passed: True\ncpu  torch.channels_last      gradcheck passed: True\ncuda torch.contiguous_format  gradcheck passed: True\ncuda torch.channels_last      gradcheck passed: False\nforward equal: True\nbackward equal: False\ngradient, contiguous input:\n tensor([[[[-0.1746, -0.1866, -0.2601],\n          [-0.1782, -0.2048, -0.2289],\n        ",
+            ".sum(), b)\nprint(\"backward equal:\", torch.allclose(grad_a, grad_b))\nprint(\"gradient, contiguous input:\\n\", grad_a)\nprint(\"gradient, channels_last input:\\n\", grad_b)\n```\n\nOutput:\n\n```\ncpu  torch.contiguous_format  gradcheck passed: True\ncpu  torch.channels_last      gradcheck passed: True\ncuda torch.contiguous_format  gradcheck passed: True\ncuda torch.channels_last      gradcheck passed: False\nforward equal: True\nbackward equal: False\ngradient, contiguous input:\n tensor([[[[-0.1746, -0.1866, -0.2601],\n          [-0.1782, -0.2048, -0.2289],\n          [-0.0598,  0.0063,  0.0213]],\n\n         [[-0.111"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205204,
+      "url": "https://github.com/pytorch/pytorch/issues/205204",
+      "title": "DISABLED test_autocast_torch_bf16 (__main__.TestXpuAutocast)",
+      "created_at": "2026-11-17T00:22:23Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "c113824bd95335dd74cb432a66366806a5ca7a5f10e99a9152518e58f5e211ff",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205204",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205204#issuecomment-6933639836",
+          "comment_id": 6933639836,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205204` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205205,
+      "url": "https://github.com/pytorch/pytorch/issues/205205",
+      "title": "DISABLED test_remove_inductor_deps_templates (__main__.TestKernelBenchmark)",
+      "created_at": "2026-11-17T00:23:09Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "oncall: pt2",
+        "module: inductor",
+        "module: xpu"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "3592ba53b7889e6cd248418fb726d1b72c26ad63bda6a178c4f73d213c85c55f",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205205",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205205#issuecomment-6933656635",
+          "comment_id": 6933656635,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205205` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205206,
+      "url": "https://github.com/pytorch/pytorch/issues/205206",
+      "title": "DISABLED test_comprehensive_nn_functional_bilinear_xpu_float16 (__main__.TestInductorOpInfoXPU)",
+      "created_at": "2026-11-17T00:25:09Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "oncall: pt2",
+        "module: inductor",
+        "module: xpu"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "76da351d44f605cbfa1eafa47e42187f1ce2d0e51dd046a4c5071ccd515a967d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205206",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205206#issuecomment-6933697958",
+          "comment_id": 6933697958,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205206` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205207,
+      "url": "https://github.com/pytorch/pytorch/issues/205207",
+      "title": "DISABLED test_sparse_sparse_mul_xpu_float16 (__main__.TestSparseXPU)",
+      "created_at": "2026-11-17T00:26:09Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "81878e762bf5ca0daaf14faa02414a1f887ed8c4c832d95bf775bedb2141e631",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205207",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205207#issuecomment-6933717722",
+          "comment_id": 6933717722,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205207` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205215,
+      "url": "https://github.com/pytorch/pytorch/issues/205215",
+      "title": "norm at zero returns NaN or zero across Hessian APIs",
+      "created_at": "2026-11-17T03:02:39Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: double backwards",
+        "module: autograd",
+        "module: linear algebra",
+        "module: functorch",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "specific_exclusion",
+      "rationale": "Drive-path regex matched a print-string ending in a colon and escaped newline, not a Windows path or OS report.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "f166c881e96be18e0373ddfcf547a2f8eb126888a7e0e6b983cf661a1236db48",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205215",
+          "field": "title/body",
+          "excerpts": [
+            ")\nprint(\"selected gradient:\", torch.func.grad(f)(x))\nh1 = torch.autograd.functional.hessian(f, x)\nh2 = torch.func.hessian(f)(x)\nprint(\"autograd Hessian:\\n\", h1.reshape(2,2))\nprint(\"func Hessian:\\n\", h2.reshape(2,2))\nprint(\"vhp:\", torch.autograd.functional.vhp(f,x,torch.ones_like(x))[1])\nprint(\"hvp:\", torch.autograd.functional.hvp(f,x,torch.ones_like(x))[1])\n\n```\n\n## Output\n\n```\nprimal: tensor(0., dtype=torch.float64)\nselected gradient: tensor([[0., 0.]], dtype=torch.float64)\nautograd Hessian:\n tensor([[nan, nan],\n        [nan, nan]], dtype=torch.float64)\nfunc Hessian:\n tensor([[0., 0.],\n        [",
+            "rad(f)(x))\nh1 = torch.autograd.functional.hessian(f, x)\nh2 = torch.func.hessian(f)(x)\nprint(\"autograd Hessian:\\n\", h1.reshape(2,2))\nprint(\"func Hessian:\\n\", h2.reshape(2,2))\nprint(\"vhp:\", torch.autograd.functional.vhp(f,x,torch.ones_like(x))[1])\nprint(\"hvp:\", torch.autograd.functional.hvp(f,x,torch.ones_like(x))[1])\n\n```\n\n## Output\n\n```\nprimal: tensor(0., dtype=torch.float64)\nselected gradient: tensor([[0., 0.]], dtype=torch.float64)\nautograd Hessian:\n tensor([[nan, nan],\n        [nan, nan]], dtype=torch.float64)\nfunc Hessian:\n tensor([[0., 0.],\n        [0., 0.]], dtype=torch.float64)\nvhp: tensor"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205216,
+      "url": "https://github.com/pytorch/pytorch/issues/205216",
+      "title": "[pipelining] Last stage keeps finished microbatch loss graphs until step() ends, so memory grows with n_microbatches",
+      "created_at": "2026-11-17T03:28:19Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "oncall: distributed",
+        "module: memory usage",
+        "module: pipelining",
+        "bot-triaged",
+        "oncall: distributed parallelisms"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "f42c8eb61ee373a9a29400af110a4045e00e7a33e68f0deaa6047dd1c467d74e",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205216",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205232,
+      "url": "https://github.com/pytorch/pytorch/issues/205232",
+      "title": "[Tracking] Extend deterministic CUDA backward support for interpolation modes",
+      "created_at": "2026-11-17T05:31:31Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: performance",
+        "module: autograd",
+        "module: cuda",
+        "triaged",
+        "enhancement",
+        "module: determinism",
+        "module: interpolation",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "f741cad8c3cac6d5a975e678932f2483ea74eef210f5b72f8d50a2a47be1f61d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205232",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205234,
+      "url": "https://github.com/pytorch/pytorch/issues/205234",
+      "title": "Parse compiler-bisector state values as literals",
+      "created_at": "2026-11-17T05:54:09Z",
+      "state_at_discovery": "closed",
+      "labels": [
+        "module: error checking",
+        "triaged",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "closed",
+      "rationale": "Closed at frozen discovery; excluded before Windows triage.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "3ba243671c6b10f69743c68ab467dff3a5946283b8107758f39146e74838ebc8",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205234",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205236,
+      "url": "https://github.com/pytorch/pytorch/issues/205236",
+      "title": "default_collate changes the values of collections.Counter",
+      "created_at": "2026-11-17T06:06:36Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: dataloader",
+        "module: regression",
+        "module: correctness (silent)",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "b76980cbd637dc894c080734d6bdf81ab11bf375df0a7021de026e350dd5ccf4",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205236",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205249,
+      "url": "https://github.com/pytorch/pytorch/issues/205249",
+      "title": "[dynamic shapes] Derived ShapeVar expressions are not JSON serializable and break compilation metrics logging",
+      "created_at": "2026-11-17T06:33:05Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: logging",
+        "triaged",
+        "oncall: pt2",
+        "module: dynamic shapes",
+        "module: dynamo",
+        "bot-triaged",
+        "release triage"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "b614881a2e5213c5681c960564177ed8a0be80c7115891bce2ea00e06774f17b",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205249",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205252,
+      "url": "https://github.com/pytorch/pytorch/issues/205252",
+      "title": "[accelerator] _snapshot() hardcodes CUDA fallback for non-XPU accelerators",
+      "created_at": "2026-11-17T06:56:04Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: accelerator",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 3,
+      "retained_comment_count": 3,
+      "body_sha256": "f63db41e4b5de0fd708fdae7bcdd661f37e6bb1699bfaa6985bcc1cead49515d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205252",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205265,
+      "url": "https://github.com/pytorch/pytorch/issues/205265",
+      "title": "DISABLED test_sparse_sparse_mul_xpu_float32 (__main__.TestSparseXPU)",
+      "created_at": "2026-11-17T08:13:11Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "bd710411ddb1a3083261b4edb858495597d0abffd3db2f4cb1ac2cff1c84f5c4",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205265",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205265#issuecomment-6942512282",
+          "comment_id": 6942512282,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205265` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205266,
+      "url": "https://github.com/pytorch/pytorch/issues/205266",
+      "title": "DISABLED test_coo_to_csr_convert_noncontiguous_indices_xpu_float64 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-17T08:13:20Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "a1891c518e0378c0e73fdf4183d4bd751c3ea779743b4967f8c12a6d68a3b5cb",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205266",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205266#issuecomment-6942515575",
+          "comment_id": 6942515575,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205266` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205267,
+      "url": "https://github.com/pytorch/pytorch/issues/205267",
+      "title": "DISABLED test_sparse_add_xpu_complex128 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-17T08:13:24Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "7ead24ad66e4880fdbe8301f7317a1534844d090e7e0037ff388bddb361e2176",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205267",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205267#issuecomment-6942517117",
+          "comment_id": 6942517117,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205267` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205270,
+      "url": "https://github.com/pytorch/pytorch/issues/205270",
+      "title": "[CUDA 13.5] Valgrind reports uninitialized values in cuSPARSE during basic CI test",
+      "created_at": "2026-11-17T08:46:47Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: cuda",
+        "module: ci",
+        "module: tests",
+        "triaged",
+        "module: sanitizers",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "20083b533db96ae41e009c79161866b442ec1fc0cae67690e4d90644f5306793",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205270",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205274,
+      "url": "https://github.com/pytorch/pytorch/issues/205274",
+      "title": "[aarch64] bf16 `conv2d` on CPU returns wrong results when `out_channels` is not a multiple of 4 (oneDNN `indirect_gemm:acl`)",
+      "created_at": "2026-11-17T10:36:08Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: cpu",
+        "module: convolution",
+        "module: mkldnn",
+        "has workaround",
+        "module: bfloat16",
+        "module: correctness (silent)",
+        "module: arm",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "670939d62e8094e1143bbf1f11c29e5727a853422384f30421ab96debc274342",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205274",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205275,
+      "url": "https://github.com/pytorch/pytorch/issues/205275",
+      "title": "`torch.div(..., rounding_mode=\"trunc\")` on integer tensors with a zero divisor terminates the process under `torch.compile` on CPU instead of raising the `RuntimeError` eager raises",
+      "created_at": "2026-11-17T10:44:54Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2",
+        "oncall: cpu inductor"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "assigned_execution_request",
+      "rationale": "Native-Windows reported failure; designated owner execution was already requested by the Orchestrator.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "86f6fddc51c0db219a0e4e391a09fe21e42c4a19d8909b292806d42e61d073fa",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205275",
+          "field": "title/body",
+          "excerpts": [
+            "sing the `RuntimeError` eager raises\n### 🐛 Describe the bug\n\n**Summary.** On CPU with `2.16.0.dev20261116+cpu` (Ubuntu) and `2.16.0.dev20261104+cpu` (Windows), `torch.compile(lambda: torch.div(torch.tensor([6, 6, 6]), torch.zeros(3, dtype=torch.int64), rounding_mode=\"trunc\"), backend=\"inductor\")()` terminates the interpreter instead of raising, while eager, `aot_eager`, `rounding_mode=\"floor\"` and `torch.remainder` all raise `RuntimeError` whose message is `ZeroDivisionError`. The user expects the exception the same call raises without compiling and gets a dead process instead, which is hard to attri",
+            "process**. Each case runs in its own child process, so\nthe driver survives and can report the raw status (`signal=N (NAME)` on POSIX, `status=0x…` on Windows):\n\n```python\n\"\"\"Integer trunc-division by zero under torch.compile: raise, compute, or abort the process?\n\nEach case runs in its own child process; an abnormal exit is reported as \"abort\" (no signal name,\nbecause the code differs between platforms: SIGILL/SIGFPE on Linux, 0xC0000094 on Windows).\n\"\"\"\nimport pathlib\nimport signal\nimport subprocess\nimport sys\nimport tempfile\n\nimport torch\n\nSIG = {}\nfor _n in dir(signal):\n    if _n.startswith(\"SIG\")"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205276,
+      "url": "https://github.com/pytorch/pytorch/issues/205276",
+      "title": "`cross_entropy` on CPU accepts an `int32` (and a `bool`) target under `torch.compile` that eager rejects, while rejecting a `uint8` target that eager accepts",
+      "created_at": "2026-11-17T10:46:13Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: error checking",
+        "triaged",
+        "needs research",
+        "oncall: pt2",
+        "module: decompositions",
+        "module: inductor",
+        "topic: fuzzer"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "assigned_execution_request",
+      "rationale": "Native-Windows reported failure; designated owner execution was already requested by the Orchestrator.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "9ac9c8002755893a0ba2e9f4fd587e4c84f50e33028deae10e63b170430a5d88",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205276",
+          "field": "title/body",
+          "excerpts": [
+            " a `uint8` target that eager accepts\n### 🐛 Describe the bug\n\n**Summary.** On CPU with `2.16.0.dev20261116+cpu` (Ubuntu) and `2.16.0.dev20261104+cpu` (Windows), eager `F.cross_entropy` accepts targets of dtype `int64` and `uint8` and raises `expected target dtype to be Long or Byte` for `int32`, `int16` and `bool`, while `torch.compile` with `aot_eager` or `inductor` accepts `int64`, `int32` and `bool` and raises for `uint8` and `int16`. The user expects the same set of accepted target dtypes either way and gets two overlapping but different sets, with no warning when a dtype is accepted that eager re",
+            "s debug build: False\nCUDA used to build PyTorch: None\nOS: Ubuntu 24.04.5 LTS\nPython version: 3.12.3\n```\n\nThe same matrix on `2.16.0.dev20261104+cpu` (Windows 11, Python 3.14.7) prints the same rows.\n\n\ncc @malfet @chauhang @penguinwu @voznesenskym @EikanWang @jgong5 @Guobing-Chen @XiaobingSuper @zhuhaozhe @blzheng @wenzhe-nrv @jiayisunx @ipiszy @kadeng @muchulee8 @amjames @aakhundov @coconutruben @jataylo"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205279,
+      "url": "https://github.com/pytorch/pytorch/issues/205279",
+      "title": "`torch.compile` returns `[-5, -5, -5]` for a constant `-torch.tensor([INT_MIN, 5, 5])` on the tested Linux nightlies, and `abs` of a constant `[INT_MIN, -5, -5]` returns `[5, 5, 5]`",
+      "created_at": "2026-11-17T11:10:21Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2",
+        "oncall: cpu inductor"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "specific_exclusion",
+      "rationale": "Reported failure is Linux-only; the issue explicitly reports correct output on the tested Windows build.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "21c0e1111743e0fc9406338026e6208c83f8646018103cb4d950325945594bdc",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205279",
+          "field": "title/body",
+          "excerpts": [
+            "o build PyTorch: None\nOS: Ubuntu 24.04.5 LTS\nPython version: 3.12.3\n```\n\nReproduced on `2.16.0.dev20261115+cpu` as well. The `2.16.0.dev20261104+cpu` Windows build I tried returns the\ncorrect value, but it is an older build, so this does not settle whether the difference is the platform or the\nversion.\n\n\ncc @chauhang @penguinwu"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205291,
+      "url": "https://github.com/pytorch/pytorch/issues/205291",
+      "title": "`torch.compile` with Inductor drops the self/source dtype-equality check of `index_add`, `index_copy_` and `put_`, accumulating a rounded source where eager raises",
+      "created_at": "2026-11-17T12:42:22Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: error checking",
+        "triaged",
+        "actionable",
+        "oncall: pt2",
+        "module: decompositions",
+        "module: inductor",
+        "topic: fuzzer"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "preexisting_processing_skip",
+      "rationale": "Native-Windows reported failure; skip due to preexisting processing evidence.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "7a684b5f1b09b6d75fde766c1cd4840ab9c873ef140802a0377b9ac286afc468",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205291",
+          "field": "title/body",
+          "excerpts": [
+            "  {'':<20} aot_e: {run(fn, 'aot_eager')}\")\n    print(f\"  {'':<20} indct: {run(fn, 'inductor')}\")\n```\n\n```text\ntorch 2.16.0.dev20261104+cpu 7f24a19c09 win32\n  f64 <- int64         eager: RuntimeError: index_add_(): self (Double) and source (Long\n                       aot_e: RuntimeError: index_add_(): self (Double) and source (Long\n                       indct: ok [2.0, 1.0]\n  f32 <- f16           eager: RuntimeError: index_add_(): self (Float) and source (Half)\n                       aot_e: RuntimeError: index_add_(): self (Float) and source (Half)\n                       indct: ok [2.0, 1.0]\n  int",
+            "\"  {label:<24} eager: {run(fn, 'eager')}\")\n    print(f\"  {'':<24} indct: {run(fn, 'inductor')}\")\n```\n\n```text\ntorch 2.16.0.dev20261104+cpu 7f24a19c09 win32\n  index_add out-of-place   eager: RuntimeError: index_add_(): self (Double) and source (\n                           indct: ok [2.0, 1.0]\n  index_copy_              eager: RuntimeError: index_copy_(): self and source expected \n                           indct: ok [1.0, 1.0]\n  put_                     eager: RuntimeError: put_(): self and source expected to have\n                           indct: ok [1.0, 1.0]\n  index_put_               eager: Runt"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205292,
+      "url": "https://github.com/pytorch/pytorch/issues/205292",
+      "title": "`unique`, `unique_consecutive`, `bincount`, `nonzero` and `masked_select` on an empty tensor built inside the compiled function fail to compile",
+      "created_at": "2026-11-17T12:43:41Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "needs research",
+        "oncall: pt2",
+        "module: dynamic shapes",
+        "module: inductor",
+        "topic: fuzzer"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "assigned_execution_request",
+      "rationale": "Native-Windows reported failure; designated owner execution was already requested by the Orchestrator.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "f3321f76a3ff4088f21b306cbd8d34f6fb8e3d907d88bf98a584dab3d1706bd9",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205292",
+          "field": "title/body",
+          "excerpts": [
+            "t sys\nimport tempfile\n\nos.environ[\"TORCHINDUCTOR_CACHE_DIR\"] = tempfile.mkdtemp(prefix=\"ti_83a_\")\n\nif \"win\" in sys.platform:\n    sys.path.insert(0, r\"D:\\\\wsl\\\\personal\\\\dr\\\\paper\\\\toxic_compile\\\\plan\")\n    try:\n        from tcc.compat import ensure_msvc_env\n        ensure_msvc_env()\n    except Exception as exc:                              # noqa: BLE001\n        print(\"msvc:\", exc)\n\nimport torch\nimport torch._dynamo\n\nprint(f\"torch {torch.__version__} | {torch.version.git_version[:10]} | {sys.platform}\")\nDT = torch.float64\n\nCASES = {\n    \"unique(empty inside)\": lambda: torch.unique(torch.tensor([]",
+            "s\nimport tempfile\n\nos.environ[\"TORCHINDUCTOR_CACHE_DIR\"] = tempfile.mkdtemp(prefix=\"ti_83a_\")\n\nif \"win\" in sys.platform:\n    sys.path.insert(0, r\"D:\\\\wsl\\\\personal\\\\dr\\\\paper\\\\toxic_compile\\\\plan\")\n    try:\n        from tcc.compat import ensure_msvc_env\n        ensure_msvc_env()\n    except Exception as exc:                              # noqa: BLE001\n        print(\"msvc:\", exc)\n\nimport torch\nimport torch._dynamo\n\nprint(f\"torch {torch.__version__} | {torch.version.git_version[:10]} | {sys.platform}\")\nDT = torch.float64\n\nCASES = {\n    \"unique(empty inside)\": lambda: torch.unique(torch.tensor([], dt"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205293,
+      "url": "https://github.com/pytorch/pytorch/issues/205293",
+      "title": "[XPU][Windows] torch.where returns empty indices for a valid boolean mask on Intel Arc 140T",
+      "created_at": "2026-11-17T12:48:11Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: windows",
+        "module: advanced indexing",
+        "module: correctness (silent)",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "assigned_execution_request",
+      "rationale": "Native-Windows reported failure; designated owner execution was already requested by the Orchestrator.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "e71f3d6b7ab2a8c669a0dea036091ef8155a1a1a39bcce2fe13906cf63657396",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205293",
+          "field": "title/body",
+          "excerpts": [
+            "[XPU][Windows] torch.where returns empty indices for a valid boolean mask on Intel Arc 140T\n### 🐛 Describe the bug\n\n## Description\nNative PyTorch XPU returns incorrect indices for a four-element boolean tensor. Copying the input back to CPU confirms the mask transferred correctly.\n\n## Minimal reproducer\n\n```python\nimport torch\n\nprint(\"PyTorch:\", torch.__version__)\nprint(\"GPU:\", torch.xpu.get_device_name(0))\n\ncpu_mask = torch.tensor([True, False, True, False])",
+            "ult\n\n````\nExpected: tensor([0, 2])\nActual: tensor([], dtype=torch.int64)\n````\n\nThe final assertion fails because the shapes differ.\n\n## Environment\n- Windows, x86-64\n- Python: 3.14.10\n- PyTorch: 2.16.0.dev20261116+xpu\n- torchvision: 0.30.0.dev20261116+xpu\n- GPU: Intel Arc 140T\n- Intel graphics driver: 32.0.101.9175\n- pip check: no broken requirements\n\n\n## Additional context\nFaster R-CNN fails at torch.where(keep)[0] inside torchvision’s remove_small_boxes with:\n```\nRuntimeError: Storage size calculation overflowed\nwith sizes=[1, -4512858499874612836]\n```\n\nThe same model and image complete inference o"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205296,
+      "url": "https://github.com/pytorch/pytorch/issues/205296",
+      "title": "Feedback about torch.nn.functional.pad",
+      "created_at": "2026-11-17T13:20:25Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: docs",
+        "triaged",
+        "enhancement",
+        "module: padding",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "9819d541cde4b1d9bcb5cc04566c25b27e92ba6bf5d06772d4495929ad1e08b5",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205296",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205298,
+      "url": "https://github.com/pytorch/pytorch/issues/205298",
+      "title": "torch.compile(flex_attention) returns outputs for the WRONG BlockMask when called again at the same shapes with a different mask",
+      "created_at": "2026-11-17T14:28:31Z",
+      "state_at_discovery": "closed",
+      "labels": [
+        "triage review",
+        "has workaround",
+        "module: correctness (silent)",
+        "oncall: pt2",
+        "module: dynamo",
+        "module: guards",
+        "module: pt2 accuracy",
+        "module: flex attention",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "closed",
+      "rationale": "Closed at frozen discovery; excluded before Windows triage.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 0,
+      "body_sha256": "b96a73b160deb2e442d9574c7b53dbf09d05de17a6d254f697a452817f42b8cc",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205298",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205299,
+      "url": "https://github.com/pytorch/pytorch/issues/205299",
+      "title": "MPS: torch.topk hangs the GPU on M5 Ultra (kIOGPUCommandBufferCallbackErrorHang, \"CDM Kill timeout\"), 2.14.1 and 2.15.0",
+      "created_at": "2026-11-17T14:36:58Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "needs reproduction",
+        "module: crash",
+        "triaged",
+        "has workaround",
+        "module: correctness (silent)",
+        "module: sorting and selection",
+        "module: mps",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 3,
+      "retained_comment_count": 3,
+      "body_sha256": "574d5491abc6676f092bc71030903e32962d0715682852c05269f8d6a8deefeb",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205299",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205308,
+      "url": "https://github.com/pytorch/pytorch/issues/205308",
+      "title": "cudaMallocAsync OOM message reports a 17179869184.00 GiB \"user-supplied memory fraction\" limit when no fraction is set",
+      "created_at": "2026-11-17T15:28:51Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "enhancement",
+        "module: ux",
+        "module: CUDACachingAllocator",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "98c3c4826e2a5d36f00745bf66ad95c424d346ddab77e32b7427c8df617b9855",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205308",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205309,
+      "url": "https://github.com/pytorch/pytorch/issues/205309",
+      "title": "[c10d] nccl2 gather_single fails on a 2-D input at the destination rank",
+      "created_at": "2026-11-17T15:54:48Z",
+      "state_at_discovery": "closed",
+      "labels": [
+        "oncall: distributed",
+        "triaged",
+        "module: nccl",
+        "actionable",
+        "module: c10d",
+        "bot-triaged",
+        "oncall: distributed infra"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "closed",
+      "rationale": "Closed at frozen discovery; excluded before Windows triage.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 0,
+      "body_sha256": "cf75936d1faa24e69b83c98b02b7f9d707b6bfe31552b0726aa57f8ca592c0d9",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205309",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205319,
+      "url": "https://github.com/pytorch/pytorch/issues/205319",
+      "title": "[Functionalization] Incorrect values after in-place mutation of a non-overlapping transposed unfold view",
+      "created_at": "2026-11-17T17:29:56Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "high priority",
+        "triaged",
+        "actionable",
+        "module: correctness (silent)",
+        "module: functionalization",
+        "oncall: pt2",
+        "module: pt2-dispatcher",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "specific_exclusion",
+      "rationale": "The word windows describes tensor unfold/sliding windows, not the operating system.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "bba7acaafa6ecb49c47f304eb30905f5090572f4db8a79e41e6e47eb48758fb0",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205319",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205319#issuecomment-6968165925",
+          "comment_id": 6968165925,
+          "excerpts": [
+            "fix would be to make `unfold_inverse` preserve the original base tensor's strides by allocating the output with the same layout before scattering the windows back.\n\nI'll also add the reproducer from this issue to `test/test_functionalization.py` and check that both the values and strides match the eager result.\n\nThis seems separate from #198102 and #205026, which deal with gapped windows. Here, `size == step`, so the windows cover the base tensor exactly.\n\nAI assistance was used during the investigation, and I verified the findings against the source code.",
+            "lization.py` and check that both the values and strides match the eager result.\n\nThis seems separate from #198102 and #205026, which deal with gapped windows. Here, `size == step`, so the windows cover the base tensor exactly.\n\nAI assistance was used during the investigation, and I verified the findings against the source code."
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205321,
+      "url": "https://github.com/pytorch/pytorch/issues/205321",
+      "title": "DISABLED test_sparse_sparse_mul_xpu_float64 (__main__.TestSparseXPU)",
+      "created_at": "2026-11-17T17:45:10Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "ddc25fbdd9fedacedbde312c87cffa80924eb5a740ce2b872050dff4d6deeb3d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205321",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205321#issuecomment-6956104094",
+          "comment_id": 6956104094,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205321` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205322,
+      "url": "https://github.com/pytorch/pytorch/issues/205322",
+      "title": "DISABLED test_sparse_add_aliased_out_xpu_complex64 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-17T17:45:13Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "69203797b5ff4453fd1b2d6bc73ea98d5436d9c6b01d99f55b9781c2ea4b89e7",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205322",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205322#issuecomment-6956105393",
+          "comment_id": 6956105393,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205322` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205323,
+      "url": "https://github.com/pytorch/pytorch/issues/205323",
+      "title": "DISABLED test_sparse_add_xpu_float32 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-17T17:45:17Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "77e78f16270bf5cb8c0ab3b1ce41d5942978209ad9e51f8dfc7e2ee016fd8c02",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205323",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205323#issuecomment-6956105705",
+          "comment_id": 6956105705,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205323` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205324,
+      "url": "https://github.com/pytorch/pytorch/issues/205324",
+      "title": "DISABLED test_power_draw_returns_float (__main__.TestXpu)",
+      "created_at": "2026-11-17T17:46:04Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "aa775409c93f5046e4b1326080682deee2f0dd9766f94cce3f10b0f5472f385e",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205324",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205324#issuecomment-6956125446",
+          "comment_id": 6956125446,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205324` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205325,
+      "url": "https://github.com/pytorch/pytorch/issues/205325",
+      "title": "[Inductor] Complex addition fails after mutating an expanded view due to invalid stride",
+      "created_at": "2026-11-17T17:47:31Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: complex",
+        "module: viewing and reshaping",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "ae1c39de3031b218eb4e5a5d41314e8f0c46bb747e4e8451937182cffe42e583",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205325",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205359,
+      "url": "https://github.com/pytorch/pytorch/issues/205359",
+      "title": "[MPS] A 16 MiB tensor reserves a 1 GiB heap, so a step fails with Insufficient Memory below `recommendedMaxWorkingSetSize`",
+      "created_at": "2026-11-17T19:29:19Z",
+      "state_at_discovery": "open",
+      "labels": [],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "0929a149b177d95a1098e3c89d91f57af16c435a23596752e74e8de92d36da8a",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205359",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205366,
+      "url": "https://github.com/pytorch/pytorch/issues/205366",
+      "title": "[Inductor][CPU] Performance Regression in ResNet-50 INT8  (qconv_2d)",
+      "created_at": "2026-11-17T20:07:15Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: cpu inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "70f0c745b9b1091df27b921452d5b3b38363ab0fc0543b2c46d4cc8a9985aa1f",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205366",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205367,
+      "url": "https://github.com/pytorch/pytorch/issues/205367",
+      "title": "CUDA backward: gradient summation order depends on unrelated earlier autograd activity in the process",
+      "created_at": "2026-11-17T20:07:26Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: autograd",
+        "module: cuda",
+        "module: numerical-reproducibility",
+        "has workaround",
+        "module: determinism",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "4c19124c3ef939fc00abde0f2d0b87e49da613d26e2b22247f4751338797f1cd",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205367",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205403,
+      "url": "https://github.com/pytorch/pytorch/issues/205403",
+      "title": "[dynamo] Input-mutation storage-overlap guard fails with NameError: name 'SYNTHETIC_LOCAL' is not defined when the compiled function creates an nn.Parameter",
+      "created_at": "2026-11-17T22:24:38Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "7adf391b7c2b3b252d6ee3ffbab7199374b294afe693664d967f0dfcc0ae75aa",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205403",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205404,
+      "url": "https://github.com/pytorch/pytorch/issues/205404",
+      "title": "[dynamo] Input-mutation storage-overlap guard doesn't distinguish full from partial overlap, so a cached graph silently returns wrong results",
+      "created_at": "2026-11-17T22:24:47Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "12da0903098417dbb4ca2b652c10a7b098dbc70a7ed4db240d4ac0d1966d4e19",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205404",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205412,
+      "url": "https://github.com/pytorch/pytorch/issues/205412",
+      "title": "DISABLED test_event_handle_exporter_generic_event_generic_event_xpu (__main__.TestXPUMultiprocessingXPU)",
+      "created_at": "2026-11-17T23:59:07Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "feec51f4747c955fd127183994d3acf2f4caf5e6d179ce7ad1bf2aa354c1b44a",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205412",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205412#issuecomment-6964632106",
+          "comment_id": 6964632106,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205412` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205413,
+      "url": "https://github.com/pytorch/pytorch/issues/205413",
+      "title": "DISABLED test_sparse_add_aliased_out_xpu_float32 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-17T23:59:11Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "56bb656356c1ef41d161bddd4f768315ec9470a0572281c2657e56c75adbbfa6",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205413",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205413#issuecomment-6964633242",
+          "comment_id": 6964633242,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205413` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205414,
+      "url": "https://github.com/pytorch/pytorch/issues/205414",
+      "title": "DISABLED test_sparse_sparse_mul_xpu_int16 (__main__.TestSparseXPU)",
+      "created_at": "2026-11-17T23:59:14Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: dependency bug",
+        "module: sparse",
+        "module: crash",
+        "module: tests",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "d691be7c0dfc86071db6f966c552de3a29725794181c193eca3dc2dafa41eb84",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205414",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205414#issuecomment-6964634359",
+          "comment_id": 6964634359,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205414` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205418,
+      "url": "https://github.com/pytorch/pytorch/issues/205418",
+      "title": "torch.compile().aot_compile() does not respect ShapesSpec",
+      "created_at": "2026-11-18T00:28:52Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "49620ac2329af7e8e853885559addee393d7e5a7db50f5be376bcaa1da06c2f7",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205418",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205424,
+      "url": "https://github.com/pytorch/pytorch/issues/205424",
+      "title": "DISABLED test_svd_lowrank_cuda_complex128 (__main__.TestLinalgDeviceCUDA)",
+      "created_at": "2026-11-18T00:50:35Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: cuda",
+        "module: tests",
+        "triaged",
+        "module: flaky-tests",
+        "module: linear algebra",
+        "skipped",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "b19a9ad80994038aebcb7f2426c98674ac6030c803dfa2825788c2e97e645d44",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205424",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205424#issuecomment-6965553885",
+          "comment_id": 6965553885,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205424` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205429,
+      "url": "https://github.com/pytorch/pytorch/issues/205429",
+      "title": "[optim] `load_state_dict` leaves AdamW's `step` on the GPU, so every `step()` syncs the host",
+      "created_at": "2026-11-18T01:48:22Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: performance",
+        "module: optimizer",
+        "has workaround",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "specific_exclusion",
+      "rationale": "Environment is Linux under WSL2, not a reported native-Windows failure.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "eb1a49c1c0d15e7522daf765246886c9dc3c948cb24e26e4c37e916944188034",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205429",
+          "field": "title/body",
+          "excerpts": [
+            "glibc-2.43\n\nPython version: 3.13.8 (main, Oct 10 2025, 12:48:21) [Clang 20.1.4 ] (64-bit runtime)\nPython platform: Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.43\nIs CUDA available: True\nCUDA runtime version: Could not collect\nCUDA_MODULE_LOADING set to: \nGPU models and configuration: GPU 0: NVIDIA GeForce RTX 4090 Laptop GPU\nNvidia driver version: Could not collect\ncuDNN version: Could not collect\nIs XPU available: False\nHIP runtime version: N/A\nMIOpen runtime version: N/A\nIs XNNPACK available: False\nCaching allocator config: N/A\n```\n\n</details>\n\n\ncc @vincentqb @jbschlosser @albanD "
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205432,
+      "url": "https://github.com/pytorch/pytorch/issues/205432",
+      "title": "[Inductor] int8/int16 abs and min // -1 don't wrap like eager on CPU, Halide and Triton",
+      "created_at": "2026-11-18T02:27:28Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: correctness (silent)",
+        "module: int overflow",
+        "module: edge cases",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "1a5b5b0dffd9c9aba520842b2e2f9529382cea9cf277f7f44ba31ff4a3eb591b",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205432",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205433,
+      "url": "https://github.com/pytorch/pytorch/issues/205433",
+      "title": "[MPS][Inductor] torch.compile with cpp_wrapper=True can't compile any MPS kernel: get_mps_lib_0_handle undeclared",
+      "created_at": "2026-11-18T02:27:29Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: mps",
+        "oncall: pt2",
+        "module: inductor",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "eefc1213f09eeda125097db85f16a4bc719b0dde3730f5e2198dea00d9df9a3b",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205433",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205445,
+      "url": "https://github.com/pytorch/pytorch/issues/205445",
+      "title": "[RFC] Device judgement (whitelists / branch chains) → DeviceInterface capability methods",
+      "created_at": "2026-11-18T03:29:06Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "enhancement",
+        "oncall: pt2",
+        "module: inductor",
+        "module: dynamo",
+        "module: PrivateUse1",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "435ca6d6f658ac3d611d0752e08551023eb3f6493b12975979efe9cbe7987e83",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205445",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205458,
+      "url": "https://github.com/pytorch/pytorch/issues/205458",
+      "title": "[RFC] `torch.cuda.*` calls → `torch.accelerator.*` (device-agnostic API)",
+      "created_at": "2026-11-18T03:39:29Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "enhancement",
+        "module: backend",
+        "module: accelerator",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "e6e57a6945a4970b9b8b7f74733e108f95ccb97d2efe082071ccccd4b13688ba",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205458",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205459,
+      "url": "https://github.com/pytorch/pytorch/issues/205459",
+      "title": "[RFC] Compile-time state collection missing devices → generic collection (enumerate the registry)",
+      "created_at": "2026-11-18T03:50:35Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: random",
+        "module: backend",
+        "oncall: pt2",
+        "module: aotdispatch",
+        "module: dynamo",
+        "module: pt2-dispatcher",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "85fb8266c388c1e94ef9cd43762f1ca1864e0637ef2e83892dd475a9983b80b4",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205459",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205461,
+      "url": "https://github.com/pytorch/pytorch/issues/205461",
+      "title": "[export] Record, or warn about, an outer torch.autocast that is active at export time",
+      "created_at": "2026-11-18T04:56:36Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: pt2",
+        "oncall: export",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "776045934c39bb23f272cd706438c39cf096f62e81c4f2c308a409c53f9396bc",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205461",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205463,
+      "url": "https://github.com/pytorch/pytorch/issues/205463",
+      "title": "[Dynamo] Known limitations about `DELETE_GLOBAL` handler implementation",
+      "created_at": "2026-11-18T06:05:24Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "OSS contribution wanted",
+        "oncall: pt2",
+        "module: dynamo"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "eff779a7f0fa9142a7cd0e3dcb974019cd678e72f2c5958e6ba65f099c012ee7",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205463",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205474,
+      "url": "https://github.com/pytorch/pytorch/issues/205474",
+      "title": "DISABLED test_event_record_after_input_mutation_non_escaping_generator_finally_cuda (__main__.TestStreamsCUDA)",
+      "created_at": "2026-11-18T06:44:31Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: flaky-tests",
+        "skipped",
+        "oncall: pt2",
+        "module: dynamo"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "72f4027ba9819739b4d30d41eb5ad7c49a686e638b243ca00cd6a551acfdab82",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205474",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205474#issuecomment-6971271310",
+          "comment_id": 6971271310,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205474` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205475,
+      "url": "https://github.com/pytorch/pytorch/issues/205475",
+      "title": "DISABLED test_event_record_after_input_mutation_non_escaping_generator_local_holder_cuda (__main__.TestStreamsCUDA)",
+      "created_at": "2026-11-18T06:44:34Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "module: flaky-tests",
+        "skipped",
+        "oncall: pt2",
+        "module: dynamo"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "ecbb2db8a39da6331c793ed83aa52211710c17e64dc25e19f2e33d3bf40a7d9d",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205475",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205475#issuecomment-6971271842",
+          "comment_id": 6971271842,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205475` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205478,
+      "url": "https://github.com/pytorch/pytorch/issues/205478",
+      "title": "[CUDA graphs] An exception raised inside a torch.cond branch is replaced by the capture-cleanup error",
+      "created_at": "2026-11-18T06:59:01Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triaged",
+        "enhancement",
+        "module: cuda graphs",
+        "oncall: pt2",
+        "module: higher order operators",
+        "module: pt2-dispatcher",
+        "module: compile ux",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "1771f1e79b8d287df54e7a0d33ccb40364d14938ec5bc157306d89ceac67dadc",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205478",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205479,
+      "url": "https://github.com/pytorch/pytorch/issues/205479",
+      "title": "DISABLED test_sparse_add_aliased_out_xpu_float64 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-18T07:14:43Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 2,
+      "retained_comment_count": 2,
+      "body_sha256": "a3eccd08650268e383825ff5cad2634b41c3f62cc660da0af5361710703b32ca",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205479",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205479#issuecomment-6971808412",
+          "comment_id": 6971808412,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205479` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205480,
+      "url": "https://github.com/pytorch/pytorch/issues/205480",
+      "title": "DISABLED test_sparse_sparse_mul_xpu_int32 (__main__.TestSparseXPU)",
+      "created_at": "2026-11-18T07:14:46Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "b02bafcfe877f2a1c8aabea5ad15ab05baa207e3cbff15a031846a53cb427cea",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205480",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205480#issuecomment-6971809379",
+          "comment_id": 6971809379,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205480` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205481,
+      "url": "https://github.com/pytorch/pytorch/issues/205481",
+      "title": "DISABLED test_sparse_add_xpu_complex64 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-18T07:15:11Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "5c8d2f9e304ded09faa3ab4ff1ac7db61536b4e8f47f603de6e4f5102031b62f",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205481",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205481#issuecomment-6971816807",
+          "comment_id": 6971816807,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205481` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205482,
+      "url": "https://github.com/pytorch/pytorch/issues/205482",
+      "title": "DISABLED test_sparse_add_xpu_float64 (__main__.TestSparseCSRDeviceXPU)",
+      "created_at": "2026-11-18T07:15:14Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: sparse",
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "fd6820d8d68a966c63d5140da1dfd96e8a5adf598de5949ccb3f1da5b6a7d897",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205482",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205482#issuecomment-6971817774",
+          "comment_id": 6971817774,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205482` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205483,
+      "url": "https://github.com/pytorch/pytorch/issues/205483",
+      "title": "DISABLED test_round_robin_dispatch (__main__.ComboKernelBenchmarkTestsPerSubkernelBlocks)",
+      "created_at": "2026-11-18T07:15:17Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "oncall: pt2",
+        "module: inductor",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "664361a4aaadf4c941e1d284b0d77d1a512a9fdbec7ea7194fdf29e38f6095c8",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205483",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205483#issuecomment-6971818685",
+          "comment_id": 6971818685,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205483` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205484,
+      "url": "https://github.com/pytorch/pytorch/issues/205484",
+      "title": "DISABLED test_event_handle_exporter_generic_event_xpu_event_xpu (__main__.TestXPUMultiprocessingXPU)",
+      "created_at": "2026-11-18T07:15:43Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "module: tests",
+        "triaged",
+        "skipped",
+        "module: xpu",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "generic_bot_platform_boilerplate",
+      "rationale": "Windows appears only in the disabled-test bot's generic supported-platform list; no actual native-Windows failure is reported.",
+      "initial_comment_count": 1,
+      "retained_comment_count": 1,
+      "body_sha256": "797d706b7aa4df5b5141d53d648770ab6bf4af5a4d30434b8448902e0ba60d62",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205484",
+          "field": "title/body",
+          "excerpts": []
+        },
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205484#issuecomment-6971827478",
+          "comment_id": 6971827478,
+          "excerpts": [
+            ": case-insensitive, list, of, platforms\n```\nWe currently support the following platforms: asan, dynamo, inductor, linux, mac, macos, rocm, slow, win, windows, xpu.\n\n\n### How to re-enable a test\nTo re-enable the test globally, close the issue. To re-enable a test for only a subset of platforms, remove the platforms from the list in the issue body. This may take some time to propagate. To re-enable a test only for a PR, put `Fixes #205484` in the PR body and rerun the test jobs. Note that if a test is flaky, it maybe be difficult to tell if the test is still flaky on the PR.\n</body><!-- validation-comm"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205490,
+      "url": "https://github.com/pytorch/pytorch/issues/205490",
+      "title": "quantized_decomposed.quantize_per_tensor overflows int32 on x86-64 instead of clamping to quant_max",
+      "created_at": "2026-11-18T07:48:52Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "oncall: quantization",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "3f20ddf7ecac5b8f43ecea85beecd65305231b3ec696609098bf2aae25034197",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205490",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205493,
+      "url": "https://github.com/pytorch/pytorch/issues/205493",
+      "title": "[cuDNN][varlen] Wrong dq (and OOB writes) in varlen_attn backward when q is not token-dense; regression from #200847",
+      "created_at": "2026-11-18T08:18:54Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: crash",
+        "module: cudnn",
+        "module: autograd",
+        "module: regression",
+        "module: correctness (silent)",
+        "module: sdpa",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "9906f3cacf937a69f613eae772837d166f65a1894a8d06e33f9af57efca47f0b",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205493",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205495,
+      "url": "https://github.com/pytorch/pytorch/issues/205495",
+      "title": "torch.lobpcg(method=\"basic\") silently returns duplicate eigenpairs after partial convergence",
+      "created_at": "2026-11-18T08:36:32Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: numerical-stability",
+        "module: windows",
+        "module: linear algebra",
+        "module: correctness (silent)",
+        "bot-triaged"
+      ],
+      "broad_windows_search_hit": true,
+      "category": "preexisting_processing_skip",
+      "rationale": "Native-Windows reported failure; skip due to preexisting processing evidence.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "02cf51d112c1d87555740bba5b901905cfd8169628abbbc1aaa09021cac65cf6",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205495",
+          "field": "title/body",
+          "excerpts": [
+            "20261117+cpu\nIs debug build: False\nCUDA used to build PyTorch: None\nROCm SDK used to build PyTorch: N/A\nHIP used to build PyTorch: N/A\n\nOS: Microsoft Windows 11 Home (10.0.26300 64-bit)\nGCC version: Could not collect\nClang version: Could not collect\nCMake version: version 4.0.2\nLibc version: N/A\n\nPython version: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)] (64-bit runtime)\nPython platform: Windows-11-10.0.26300-SP0\nIs CUDA available: False\nCUDA runtime version: No CUDA\nCUDA_MODULE_LOADING set to: N/A\nGPU models and configuration: No CUDA\nNvidia driver version: No C",
+            "Libc version: N/A\n\nPython version: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)] (64-bit runtime)\nPython platform: Windows-11-10.0.26300-SP0\nIs CUDA available: False\nCUDA runtime version: No CUDA\nCUDA_MODULE_LOADING set to: N/A\nGPU models and configuration: No CUDA\nNvidia driver version: No CUDA\ncuDNN version: No CUDA\nIs XPU available: False\nHIP runtime version: N/A\nMIOpen runtime version: N/A\nIs XNNPACK available: False\nCaching allocator config: N/A\n\nCPU:\nName: Intel(R) Core(TM) Ultra 7 155H\nManufacturer: GenuineIntel\nFamily: 1\nArchitecture: 9\nProcessorType: 3\nDevi"
+          ]
+        }
+      ]
+    },
+    {
+      "issue_number": 205497,
+      "url": "https://github.com/pytorch/pytorch/issues/205497",
+      "title": "CPU `fused=True` optimizers ignore tensor strides: wrong updates when param, grad and optimizer state have different layouts, heap corruption for an expanded param",
+      "created_at": "2026-11-18T08:53:17Z",
+      "state_at_discovery": "open",
+      "labels": [
+        "triage review",
+        "module: crash",
+        "module: optimizer",
+        "module: cpu",
+        "module: error checking",
+        "module: memory format",
+        "module: correctness (silent)",
+        "bot-triaged",
+        "release triage"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "no_native_windows_report",
+      "rationale": "No reported native-Windows failure in the retained title/body/labels and available comments; not expanded into issue investigation.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "92928452b236c4c1c2cfe111ed7cb9166aea2bbfb1c52011a3f4d870b035b029",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205497",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    },
+    {
+      "issue_number": 205503,
+      "url": "https://github.com/pytorch/pytorch/issues/205503",
+      "title": "Opened by mistake",
+      "created_at": "2026-11-18T10:40:50Z",
+      "state_at_discovery": "closed",
+      "labels": [
+        "oncall: distributed",
+        "module: logging",
+        "triaged",
+        "module: macos",
+        "module: elastic",
+        "bot-triaged",
+        "oncall: distributed infra"
+      ],
+      "broad_windows_search_hit": false,
+      "category": "closed",
+      "rationale": "Closed at frozen discovery; excluded before Windows triage.",
+      "initial_comment_count": 0,
+      "retained_comment_count": 0,
+      "body_sha256": "19ff6ddec01b4ab31050f26bff6098baf17d39865613c96c11bc9b93a313b5f8",
+      "evidence": [
+        {
+          "source_url": "https://github.com/pytorch/pytorch/issues/205503",
+          "field": "title/body",
+          "excerpts": []
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This is a coordination/filter/history audit, not a Windows reproduction, issue fix, test run, PR, or final owner resolution report.",
+    "Owner execution requests do not prove durable claims, started investigations, tests, or completed results. Missing records are Pending/not-yet-observed, not proof of worker failure.",
+    "Registry observations are point-in-time and may become stale while independent owners continue asynchronously. No polling-only wait was performed.",
+    "Visible issue bodies/comments/timelines, all open/closed fork PRs, branch names and relevant upstream PR searches were checked. Text search and visible references cannot reveal unreferenced private sessions, inaccessible work, or all semantically related PRs.",
+    "The frozen search was complete when collected; issue states/comments can change later. Current known Windows-issue states are refreshed separately without expanding the time window.",
+    "Preexisting PR/issue-body investigations are attributed source reports only. Their tests were not rerun and no merge or independent validation is claimed.",
+    "The Orchestrator's earlier root/.github/.agents directory checks and registry searches are retained as attributed prior evidence, not repeated or promoted to universal history knowledge."
+  ],
+  "registry_publication_before_manifest": {
+    "repository": "fuliucansheng/pytorch",
+    "branch": "msbeacon/windows-issue-registry",
+    "operations": [
+      {
+        "operation": "create_registry_ref",
+        "observed_at": "2026-11-18T11:40:32.271125Z",
+        "status": 201,
+        "base_main_sha": "421855c5b104109487b686c6a017dca0ddb5067d",
+        "response": {
+          "ref": "refs/heads/msbeacon/windows-issue-registry",
+          "node_id": "REF_kwDOVHnLDNoAKnJlZnMvaGVhZHMvbXNiZWFjb24vd2luZG93cy1pc3N1ZS1yZWdpc3RyeQ",
+          "url": "https://api.github.com/repos/fuliucansheng/pytorch/git/refs/heads/msbeacon/windows-issue-registry",
+          "object": {
+            "sha": "421855c5b104109487b686c6a017dca0ddb5067d",
+            "type": "commit",
+            "url": "https://api.github.com/repos/fuliucansheng/pytorch/git/commits/421855c5b104109487b686c6a017dca0ddb5067d"
+          }
+        }
+      },
+      {
+        "operation": "compare_and_swap",
+        "path": "windows-triage/README.md",
+        "attempt": 1,
+        "observed_at": "2026-11-18T11:40:34.274023Z",
+        "status": 201,
+        "expected_previous_blob_sha": null,
+        "sha256": "9a70f25de3950c7001431e0e784e71123850694cd4062df3cf747de56e43b801",
+        "commit_sha": "c89ef9b30247dfe2e94222f09d367ce664185181",
+        "commit_url": "https://github.com/fuliucansheng/pytorch/commit/c89ef9b30247dfe2e94222f09d367ce664185181",
+        "blob_sha": "1186b08d1ec0f36e0048b443a36564b70f287c5d",
+        "html_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/README.md",
+        "immutable_url": "https://github.com/fuliucansheng/pytorch/blob/c89ef9b30247dfe2e94222f09d367ce664185181/windows-triage/README.md"
+      },
+      {
+        "operation": "verified_immutable_readback",
+        "path": "windows-triage/README.md",
+        "commit_sha": "c89ef9b30247dfe2e94222f09d367ce664185181",
+        "blob_sha": "1186b08d1ec0f36e0048b443a36564b70f287c5d",
+        "sha256": "9a70f25de3950c7001431e0e784e71123850694cd4062df3cf747de56e43b801",
+        "observed_at": "2026-11-18T11:40:34.721902Z"
+      },
+      {
+        "operation": "create_only",
+        "path": "windows-triage/issues/205291.json",
+        "attempt": 1,
+        "observed_at": "2026-11-18T11:40:36.315269Z",
+        "status": 201,
+        "expected_previous_blob_sha": null,
+        "sha256": "eb850e9d5b5146bf3f6649ed9203bb06fddc2155d7e8dd7a86e38f97693c266e",
+        "commit_sha": "f3049f27147cbd4fabe10224cf195757712dc0b2",
+        "commit_url": "https://github.com/fuliucansheng/pytorch/commit/f3049f27147cbd4fabe10224cf195757712dc0b2",
+        "blob_sha": "d01602c570d53dd3d29a8968814f5fa2cee14c1f",
+        "html_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205291.json",
+        "immutable_url": "https://github.com/fuliucansheng/pytorch/blob/f3049f27147cbd4fabe10224cf195757712dc0b2/windows-triage/issues/205291.json"
+      },
+      {
+        "operation": "verified_immutable_readback",
+        "path": "windows-triage/issues/205291.json",
+        "commit_sha": "f3049f27147cbd4fabe10224cf195757712dc0b2",
+        "blob_sha": "d01602c570d53dd3d29a8968814f5fa2cee14c1f",
+        "sha256": "eb850e9d5b5146bf3f6649ed9203bb06fddc2155d7e8dd7a86e38f97693c266e",
+        "observed_at": "2026-11-18T11:40:36.781661Z"
+      },
+      {
+        "operation": "create_only",
+        "path": "windows-triage/issues/205495.json",
+        "attempt": 1,
+        "observed_at": "2026-11-18T11:40:38.329300Z",
+        "status": 201,
+        "expected_previous_blob_sha": null,
+        "sha256": "7df581ecc91d34de359b49c96b124cc371b8ef013042a0b7cc681cac962b87db",
+        "commit_sha": "a8d191354103e69a060e7635a9cb090ad2c7619a",
+        "commit_url": "https://github.com/fuliucansheng/pytorch/commit/a8d191354103e69a060e7635a9cb090ad2c7619a",
+        "blob_sha": "0306b9986e0ae42661a41f269233d6c84c4a65a8",
+        "html_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/issues/205495.json",
+        "immutable_url": "https://github.com/fuliucansheng/pytorch/blob/a8d191354103e69a060e7635a9cb090ad2c7619a/windows-triage/issues/205495.json"
+      },
+      {
+        "operation": "verified_immutable_readback",
+        "path": "windows-triage/issues/205495.json",
+        "commit_sha": "a8d191354103e69a060e7635a9cb090ad2c7619a",
+        "blob_sha": "0306b9986e0ae42661a41f269233d6c84c4a65a8",
+        "sha256": "7df581ecc91d34de359b49c96b124cc371b8ef013042a0b7cc681cac962b87db",
+        "observed_at": "2026-11-18T11:40:38.788573Z"
+      }
+    ],
+    "main_head_before": "421855c5b104109487b686c6a017dca0ddb5067d",
+    "registry_head_before_publication": "421855c5b104109487b686c6a017dca0ddb5067d",
+    "branch_url": "https://github.com/fuliucansheng/pytorch/tree/msbeacon/windows-issue-registry/windows-triage"
+  },
+  "local_input_provenance": [
+    {
+      "path": "results/discovery_initial.json",
+      "sha256": "2d65d30c4d0882eb070c79fb5601a61d16d1d7d79b403a2e29ad4707573f09d1",
+      "bytes": 652135
+    },
+    {
+      "path": "results/windows_search_initial.json",
+      "sha256": "0bf785d5da548bc9a30cbfec3ca3dec4b110cc8bf13ab99084e0a2741a4d462d",
+      "bytes": 230813
+    },
+    {
+      "path": "configs/original_request.md",
+      "sha256": "ff0406e493e86d56a66eca326ec73a24ad1c2915daaf014c41340cfccada7933",
+      "bytes": 6106
+    }
+  ]
+}
