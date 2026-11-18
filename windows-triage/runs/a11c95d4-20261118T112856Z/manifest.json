@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "run_id": "a11c95d4-20261118T112856Z",
-  "generated_at": "2026-11-18T11:42:55.513490Z",
+  "generated_at": "2026-11-18T11:44:36.023701Z",
   "scope": "Coordination/filter/history audit and durable registry only; independent Windows owners remain responsible for their issue outcomes.",
   "source_assignment": {
     "artifact_id": "chat-assignment",
@@ -212,7 +212,10 @@
       "observed_assignment": null,
       "assignment_match": null,
       "record_blob_sha": null,
-      "record": null
+      "record": null,
+      "observed_owner_worker_id": null,
+      "worker_match": null,
+      "ownership_verified": false
     },
     {
       "issue_number": 205276,
@@ -229,8 +232,8 @@
       "status": "Assigned",
       "observation": "registry_record_observed",
       "processed": false,
-      "observed_assignment": null,
-      "assignment_match": null,
+      "observed_assignment": "a11c95d4-20261118-205276",
+      "assignment_match": true,
       "record_blob_sha": "3144436a37f8e290749b022984d160ca8ff03f21",
       "record": {
         "issue_number": 205276,
@@ -257,7 +260,10 @@
             "note": "Authenticated history reviewed; atomic claim before reproduction."
           }
         ]
-      }
+      },
+      "observed_owner_worker_id": "7697faa7-1081-48db-8d5b-515dd9df9c86",
+      "worker_match": true,
+      "ownership_verified": true
     },
     {
       "issue_number": 205292,
@@ -274,8 +280,8 @@
       "status": "Investigating",
       "observation": "registry_record_observed",
       "processed": false,
-      "observed_assignment": null,
-      "assignment_match": null,
+      "observed_assignment": "a11c95d4-20261118-205292",
+      "assignment_match": true,
       "record_blob_sha": "50d37d7f41ac5af36dead3bbe3daaeb5fe833585",
       "record": {
         "schema_version": 1,
@@ -328,7 +334,10 @@
             "note": "Durable atomic claim verified; beginning isolated native Windows environment discovery."
           }
         ]
-      }
+      },
+      "observed_owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+      "worker_match": true,
+      "ownership_verified": true
     },
     {
       "issue_number": 205293,
@@ -348,7 +357,10 @@
       "observed_assignment": null,
       "assignment_match": null,
       "record_blob_sha": null,
-      "record": null
+      "record": null,
+      "observed_owner_worker_id": null,
+      "worker_match": null,
+      "ownership_verified": false
     }
   ],
   "current_windows_issue_states": [
@@ -2886,10 +2898,32 @@
         "blob_sha": "0306b9986e0ae42661a41f269233d6c84c4a65a8",
         "sha256": "7df581ecc91d34de359b49c96b124cc371b8ef013042a0b7cc681cac962b87db",
         "observed_at": "2026-11-18T11:40:38.788573Z"
+      },
+      {
+        "operation": "compare_and_swap",
+        "path": "windows-triage/runs/a11c95d4-20261118T112856Z/manifest.json",
+        "attempt": 1,
+        "observed_at": "2026-11-18T11:43:07.005461Z",
+        "status": 201,
+        "expected_previous_blob_sha": null,
+        "sha256": "b156becc029e1f66ff96fb28cfea629957c1ad1863383852d7b10df35bddbf5f",
+        "commit_sha": "b6e51fdb3c3c9dba5a0035281b52b45bd170b57b",
+        "commit_url": "https://github.com/fuliucansheng/pytorch/commit/b6e51fdb3c3c9dba5a0035281b52b45bd170b57b",
+        "blob_sha": "b49348b8d1473018ee17dbaa7116e190cef41141",
+        "html_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/runs/a11c95d4-20261118T112856Z/manifest.json",
+        "immutable_url": "https://github.com/fuliucansheng/pytorch/blob/b6e51fdb3c3c9dba5a0035281b52b45bd170b57b/windows-triage/runs/a11c95d4-20261118T112856Z/manifest.json"
+      },
+      {
+        "operation": "verified_immutable_readback",
+        "path": "windows-triage/runs/a11c95d4-20261118T112856Z/manifest.json",
+        "commit_sha": "b6e51fdb3c3c9dba5a0035281b52b45bd170b57b",
+        "blob_sha": "b49348b8d1473018ee17dbaa7116e190cef41141",
+        "sha256": "b156becc029e1f66ff96fb28cfea629957c1ad1863383852d7b10df35bddbf5f",
+        "observed_at": "2026-11-18T11:43:07.649578Z"
       }
     ],
     "main_head_before": "421855c5b104109487b686c6a017dca0ddb5067d",
-    "registry_head_before_publication": "421855c5b104109487b686c6a017dca0ddb5067d",
+    "registry_head_before_publication": "4b6cb309d4f442b38396a9bd1f583336276fab50",
     "branch_url": "https://github.com/fuliucansheng/pytorch/tree/msbeacon/windows-issue-registry/windows-triage"
   },
   "local_input_provenance": [
@@ -2908,5 +2942,6 @@
       "sha256": "ff0406e493e86d56a66eca326ec73a24ad1c2915daaf014c41340cfccada7933",
       "bytes": 6106
     }
-  ]
+  ],
+  "provenance_revision_note": "Recognize the owners' assignment_key and owner_worker_id fields from already-retained records. This is a provenance-only correction; observation timestamps and completed audit reads are preserved."
 }
