@@ -21,7 +21,7 @@
     "resolution_code":  "skipped_existing_pr",
     "claim_created":  false,
     "investigation_started":  false,
-    "processed":  false,
+    "processed":  true,
     "reproduced":  null,
     "reproduction_note":  "Not attempted: mandatory preflight skip, not an unsuccessful reproduction.",
     "cause_confirmed":  false,
@@ -52,21 +52,27 @@
                   "reason":  "All workload stages intentionally not run under duplicate-prevention SKIP."
               },
     "created_at":  "2026-11-18T11:52:20.5300741Z",
-    "updated_at":  "2026-11-18T11:52:20.5300741Z",
+    "updated_at":  "2026-11-18T11:52:25.8144349Z",
     "status_history":  [
                            {
                                "status":  "Resolved Without Code Change",
                                "disposition":  "Skipped Existing PR",
                                "timestamp":  "2026-11-18T11:52:20.5300741Z",
                                "reason":  "Confirmed overlapping open PR 178591 during authenticated preflight; no new investigation claim. Report publication pending."
+                           },
+                           {
+                               "status":  "Resolved Without Code Change",
+                               "disposition":  "Skipped Existing PR",
+                               "timestamp":  "2026-11-18T11:52:25.8144349Z",
+                               "reason":  "Preflight-only skip report is durably published and verified; processed=true. No fix or validation claimed."
                            }
                        ],
-    "documentation_status":  "Pending durable report publication.",
+    "documentation_status":  "Complete: report published and exact bytes verified.",
     "report":  {
                    "path":  "windows-triage/reports/205275.md",
                    "sha256":  "525123fabd2f70787e8936b8d1bf31ccf7405b9001633a680ad34fb1981e5872",
-                   "immutable_url":  null,
-                   "commit_sha":  null
+                   "immutable_url":  "https://github.com/fuliucansheng/pytorch/blob/524a3dd1287949bec3ee63da609ba6458fa622b4/windows-triage/reports/205275.md",
+                   "commit_sha":  "524a3dd1287949bec3ee63da609ba6458fa622b4"
                },
     "retry_policy":  "Do not reassign, reproduce, implement, or open a new PR absent meaningful new information or an explicit resume request. Preserve this history.",
     "ai_assisted":  true,
