@@ -1704,6 +1704,68 @@ class TestFakeTensor(_TestFakeTensorHelpers, TestCase):
         replay_out = gm(torch.randn(5, 16, 256), weight)
         self.assertEqual(replay_out.shape, (5, 16, 3072))
 
+    @parametrize("dtype", [torch.float32, torch.complex64, torch.complex128])
+    @parametrize("operation", ["view", "unsafe_view", "reshape"])
+    def test_view_concrete_singleton_strides(self, dtype, operation):
+        storage = torch.empty(400, dtype=dtype)
+        original = torch.randn(1, 37, 16, 2, 11, dtype=dtype)
+        chunk = original.transpose(2, 0).chunk(2, dim=3)[0]
+        expanded = chunk.unsqueeze(2).expand(16, 37, 2, 1, 1, 11)
+        cases = [
+            (expanded, (16, 37, 2, 1, 11)),
+            (storage.as_strided((2, 3, 1), (6, 2, 100), 5), (6, 1)),
+            (storage.as_strided((2, 1, 3), (30, 99, 2), 7), (2, 1, 3, 1)),
+            (storage.as_strided((1, 1), (17, 7), 3), (1, 1, 1)),
+            (storage[2], (1, 1)),
+            (storage[:0].reshape(0, 1), (1, 0, 1)),
+        ]
+
+        def apply(tensor, shape):
+            if operation == "view":
+                return torch.ops.aten.view.default(tensor, shape)
+            if operation == "unsafe_view":
+                return torch.ops.aten._unsafe_view.default(tensor, shape)
+            return tensor.reshape(shape)
+
+        for tensor, shape in cases:
+            with self.subTest(shape=shape, input_strides=tensor.stride()):
+                eager = apply(tensor, shape)
+                clone_strides = eager.clone().stride()
+                alias = torch._C._is_alias_of(tensor, eager)
+                with FakeTensorMode() as mode:
+                    fake = mode.from_tensor(tensor)
+                    result = apply(fake, shape)
+                    self.assertEqual(result.shape, eager.shape)
+                    self.assertEqual(result.stride(), eager.stride())
+                    self.assertEqual(result.storage_offset(), eager.storage_offset())
+                    self.assertEqual(torch._C._is_alias_of(fake, result), alias)
+                    self.assertEqual(result.clone().stride(), clone_strides)
+
+    @parametrize("dtype", [torch.float32, torch.complex64, torch.complex128])
+    def test_reshape_concrete_shape_symbolic_singleton_strides(self, dtype):
+        original = torch.randn(1, 37, 16, 2, 11, dtype=dtype)
+        chunk = original.transpose(2, 0).chunk(2, dim=3)[0]
+        expanded = chunk.unsqueeze(2).expand(16, 37, 2, 1, 1, 11)
+        eager = expanded.reshape(16, 37, 2, 1, 11)
+        clone_strides = eager.clone().stride()
+        with FakeTensorMode(shape_env=ShapeEnv()) as mode:
+            fake = mode.from_tensor(expanded, static_shapes=False)
+            result = fake.reshape(16, 37, 2, 1, 11)
+            self.assertEqual(result.stride(), eager.stride())
+            self.assertEqual(result.clone().stride(), clone_strides)
+            self.assertEqual(result.storage_offset(), eager.storage_offset())
+            self.assertTrue(torch._C._is_alias_of(fake, result))
+
+    def test_view_symbolic_result_singleton_strides(self):
+        original = torch.randn(2, 3)
+        eager = original.view(2, 1, 3)
+        with FakeTensorMode(shape_env=ShapeEnv()) as mode:
+            fake = mode.from_tensor(original, static_shapes=False)
+            result = fake.view(fake.shape[0], 1, fake.shape[1])
+            self.assertIsInstance(result.shape[0], torch.SymInt)
+            self.assertEqual(result.stride(), eager.stride())
+            self.assertTrue(torch._C._is_alias_of(fake, result))
+
     def test_view_unbacked_contiguous_relation_from_hints(self):
         shape_env = ShapeEnv()
         fake_mode = FakeTensorMode(allow_non_fake_inputs=True, shape_env=shape_env)
