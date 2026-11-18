@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "record_type": "preexisting_processing",
+  "issue_number": 205495,
+  "issue_url": "https://github.com/pytorch/pytorch/issues/205495",
+  "processed": true,
+  "decision": "skip",
+  "recorded_by_run": "a11c95d4-20261118T112856Z",
+  "source_observed_at": "2026-11-18T11:38:17.549050Z",
+  "recorded_at": "2026-11-18T11:40:36.846574Z",
+  "new_fix_validated_in_this_run": false,
+  "source_url": "https://github.com/pytorch/pytorch/issues/205495",
+  "skip_reason": "Issue body already contains AI-assisted investigation and candidate fix, a candidate regression test, before/after results and two reported reviews. Treat as preexisting processing; do not reinvestigate or assert a merged fix.",
+  "source_evidence_key": "issue/205495",
+  "source_section": "AI-assisted investigation and candidate fix"
+}
