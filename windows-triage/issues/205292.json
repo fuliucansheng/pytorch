@@ -25,10 +25,10 @@
   "run_key": "a11c95d4-20261118T112856Z",
   "assignment_key": "a11c95d4-20261118-205292",
   "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
-  "status": "Investigating",
+  "status": "Blocked",
   "processed": false,
   "assigned_at": "2026-11-18T11:40:59.882Z",
-  "updated_at": "2026-11-18T11:41:35.041Z",
+  "updated_at": "2026-11-18T17:41:52.747Z",
   "history_preflight": {
     "complete": true,
     "source": "results/history-preflight.json",
@@ -47,6 +47,59 @@
       "timestamp": "2026-11-18T11:41:35.041Z",
       "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
       "note": "Durable atomic claim verified; beginning isolated native Windows environment discovery."
+    },
+    {
+      "status": "Blocked",
+      "timestamp": "2026-11-18T17:41:52.747Z",
+      "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+      "note": "Reproduced all five reported default empty cases: baseline 24 pass, 7 dynamic-output failures, 3 separate OS-blocked controls. Authorized actual run-folder arithmetic kernel import also denied (Code Integrity 3077, status 0xc0e90002). Required native validation remains blocked; no code change or PR. Policy-owner-approved native execution required; no automatic retry."
     }
-  ]
+  ],
+  "investigation_documentation_complete": true,
+  "resolution_kind": "Blocked: required native validation prerequisite not established",
+  "reproduction": {
+    "native_windows": true,
+    "reported_default_empty_cases_reproduced": 5,
+    "executed": 34,
+    "passed": 24,
+    "failed": 10,
+    "skipped": 0,
+    "dynamic_output_defect_failures": 7,
+    "separate_application_control_failures": 3,
+    "baseline_preserved_not_replayed": true,
+    "baseline_result_sha256": "0cae5741ec210608e09ed62d1a3b4f47d82476e294c6f6a495d08a15ea31cb1b"
+  },
+  "source_baseline_sha": "d4a0a1698bd77cac68294d8679be84a78b226c45",
+  "source_head_sha": "d4a0a1698bd77cac68294d8679be84a78b226c45",
+  "code_changed": false,
+  "fixed_code_tests_run": false,
+  "pr": null,
+  "report": {
+    "url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205292.md",
+    "commit_sha": "f58f46ac13fde6464af3a711ac71bfe7695c0449",
+    "blob_sha": "11a9c9b906befca085585133172a1b675ce11833"
+  },
+  "native_validation_blocker": {
+    "attempt": "205292-run-folder-resume-1",
+    "authenticated_answer_id": "3ffdfa9d-c9cb-40fb-aebd-ce2f806395ea",
+    "run_folder_resolved_from_actual_execution_metadata": true,
+    "intended_default_inductor_arithmetic_execution_established": false,
+    "error": "DLL load failed while importing kernel: An Application Control policy has blocked this file.",
+    "code_integrity_event": 3077,
+    "code_integrity_record": 56320,
+    "status_code": "0xc0e90002",
+    "policy": "VerifiedAndReputableDesktop",
+    "scope_limit": "Intended arithmetic kernel import failed in the verified run child; not a claim that every auxiliary native binary or folder is blocked",
+    "requirement": "Policy-owner-approved intended native kernel import/execution without changing security protections"
+  },
+  "retry_policy": {
+    "skip_on_future_run": true,
+    "automatic_retry": false,
+    "resume_requires": "Meaningful new approved native execution access information or explicit user direction; preserve this checkpoint and full acceptance",
+    "no_unvalidated_pr": true
+  },
+  "artifact_delivery": {
+    "mechanism": "Exact local controller artifact allowlist and result_file",
+    "cloud_upload_complete_claimed": false
+  }
 }
