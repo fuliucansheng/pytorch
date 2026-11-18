@@ -1,0 +1,26 @@
+{
+  "issue_number": 205276,
+  "issue_url": "https://github.com/pytorch/pytorch/issues/205276",
+  "run_key": "a11c95d4-20261118T112856Z",
+  "assignment_key": "a11c95d4-20261118-205276",
+  "owner_worker_id": "7697faa7-1081-48db-8d5b-515dd9df9c86",
+  "window_start": "2026-11-16T11:28:56Z",
+  "window_end": "2026-11-18T11:28:56Z",
+  "schema_version": 1,
+  "title": "`cross_entropy` on CPU accepts an `int32` (and a `bool`) target under `torch.compile` that eager rejects, while rejecting a `uint8` target that eager accepts",
+  "issue_created_at": "2026-11-17T10:46:13Z",
+  "issue_state": "open",
+  "owner_github_login": "fuliucansheng",
+  "status": "Assigned",
+  "processed": false,
+  "assigned_at": "2026-11-18T11:42:13.406946+00:00",
+  "updated_at": "2026-11-18T11:42:13.406946+00:00",
+  "history_checks_completed_at": "2026-11-18T11:38:16.587998+00:00",
+  "status_history": [
+    {
+      "status": "Assigned",
+      "at": "2026-11-18T11:42:13.406946+00:00",
+      "note": "Authenticated history reviewed; atomic claim before reproduction."
+    }
+  ]
+}
