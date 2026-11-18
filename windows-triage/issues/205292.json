@@ -25,10 +25,10 @@
   "run_key": "a11c95d4-20261118T112856Z",
   "assignment_key": "a11c95d4-20261118-205292",
   "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
-  "status": "Assigned",
+  "status": "Investigating",
   "processed": false,
   "assigned_at": "2026-11-18T11:40:59.882Z",
-  "updated_at": "2026-11-18T11:40:59.882Z",
+  "updated_at": "2026-11-18T11:41:35.041Z",
   "history_preflight": {
     "complete": true,
     "source": "results/history-preflight.json",
@@ -41,6 +41,12 @@
       "timestamp": "2026-11-18T11:40:59.882Z",
       "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
       "note": "Authenticated issue/comments/timeline/PR and central-registry preflight complete."
+    },
+    {
+      "status": "Investigating",
+      "timestamp": "2026-11-18T11:41:35.041Z",
+      "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+      "note": "Durable atomic claim verified; beginning isolated native Windows environment discovery."
     }
   ]
 }
