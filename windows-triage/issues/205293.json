@@ -14,10 +14,10 @@
   "owner_worker_id": "5372afcf-9ee3-4fc5-8e19-fd45d410a42e",
   "owner_worker": "ProArt5090",
   "execution_id": "b1df8b00-baa5-4931-b2b9-09c1c1ee656e",
-  "status": "Assigned",
+  "status": "Investigating",
   "processed": false,
   "assigned_at": "2026-11-18T11:51:15.541Z",
-  "updated_at": "2026-11-18T11:51:15.541Z",
+  "updated_at": "2026-11-18T11:51:43.263Z",
   "eligibility_window": {
     "start": "2026-11-16T11:28:56Z",
     "end": "2026-11-18T11:28:56Z",
@@ -39,7 +39,14 @@
       "status": "Assigned",
       "at": "2026-11-18T11:51:15.541Z",
       "reason": "Complete authenticated eligibility/history checks; exact requested owner; atomic create-only claim."
+    },
+    {
+      "status": "Investigating",
+      "at": "2026-11-18T11:51:43.263Z",
+      "reason": "Durable atomic claim verified. Begin read-only native Windows display/driver/Level-Zero preflight; no PyTorch reproduction yet."
     }
   ],
-  "ai_disclosure": "AI-authored personal-fork processing documentation. No human review, reproduction, fix, or upstream acceptance is asserted."
+  "ai_disclosure": "AI-authored personal-fork processing documentation. No human review, reproduction, fix, or upstream acceptance is asserted.",
+  "claim_commit_sha": "b3de597a306666c4752e27707cf5000a5727b2eb",
+  "claim_commit_url": "https://github.com/fuliucansheng/pytorch/commit/b3de597a306666c4752e27707cf5000a5727b2eb"
 }
