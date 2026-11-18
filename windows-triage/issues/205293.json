@@ -14,17 +14,17 @@
   "owner_worker_id": "5372afcf-9ee3-4fc5-8e19-fd45d410a42e",
   "owner_worker": "ProArt5090",
   "execution_id": "b1df8b00-baa5-4931-b2b9-09c1c1ee656e",
-  "status": "Investigating",
-  "processed": false,
+  "status": "Blocked",
+  "processed": true,
   "assigned_at": "2026-11-18T11:51:15.541Z",
-  "updated_at": "2026-11-18T11:51:43.263Z",
+  "updated_at": "2026-11-18T13:31:43.402Z",
   "eligibility_window": {
     "start": "2026-11-16T11:28:56Z",
     "end": "2026-11-18T11:28:56Z",
     "inclusive": true
   },
   "report_path": "windows-triage/reports/205293.md",
-  "report_url": null,
+  "report_url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205293.md",
   "pr_url": null,
   "source": {
     "assignment_sha256": "639c2e99196e1362c4de966ee5ff7781ac7a6a7b0cf1b9a7f11d2b223cd2b2b7",
@@ -44,9 +44,34 @@
       "status": "Investigating",
       "at": "2026-11-18T11:51:43.263Z",
       "reason": "Durable atomic claim verified. Begin read-only native Windows display/driver/Level-Zero preflight; no PyTorch reproduction yet."
+    },
+    {
+      "status": "Blocked",
+      "at": "2026-11-18T13:31:43.402Z",
+      "reason": "Confirmed native Windows XPU reproduction; supported source fix and actual changed-PyTorch validation remain unestablished. Complete report was durably published and byte-verified first."
     }
   ],
   "ai_disclosure": "AI-authored personal-fork processing documentation. No human review, reproduction, fix, or upstream acceptance is asserted.",
   "claim_commit_sha": "b3de597a306666c4752e27707cf5000a5727b2eb",
-  "claim_commit_url": "https://github.com/fuliucansheng/pytorch/commit/b3de597a306666c4752e27707cf5000a5727b2eb"
+  "claim_commit_url": "https://github.com/fuliucansheng/pytorch/commit/b3de597a306666c4752e27707cf5000a5727b2eb",
+  "completed_at": "2026-11-18T13:31:43.402Z",
+  "report_sha256": "642e921596e91a249e126246be74f2c2dad3f508c7444f3e6671a097a619496a",
+  "report_commit_sha": "f8d14422fa242a690fb1a121fff52ef35ea3f4a0",
+  "investigation": {
+    "reproduction_attempted": true,
+    "issue_symptom_reproduced": true,
+    "native_windows_xpu": true,
+    "worker_gpu": "Intel Graphics DEV_7D67",
+    "reporter_gpu": "Arc 140T DEV_7D51",
+    "torch_version": "2.16.0.dev20261116+xpu",
+    "torch_git": "92e66172abb6bbfaf1f1a1ef9cf624276d5c8412",
+    "root_cause": "Unconfirmed",
+    "product_code_changed": false,
+    "patched_pytorch_validated": false,
+    "blocker": "No demonstrated source-level cause/minimal production fix or matched changed-PyTorch native Windows XPU before-fail/after-pass validation.",
+    "hardware_or_compiler_absent": false,
+    "speculative_pr_created": false,
+    "allocation_control_limitation": "24/24 pass changes both waits and prefill; allocator cause not isolated.",
+    "recommended_next_step": "Matched instrumented native PyTorch build and independent prefill-versus-sync controls before any production fix."
+  }
 }
