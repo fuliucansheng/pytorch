@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue_number": 205292,
+  "source": {
+    "url": "https://github.com/pytorch/pytorch/issues/205292",
+    "state": "open",
+    "title": "`unique`, `unique_consecutive`, `bincount`, `nonzero` and `masked_select` on an empty tensor built inside the compiled function fail to compile",
+    "created_at": "2026-11-17T12:43:41Z",
+    "updated_at": "2026-11-17T19:05:32Z",
+    "comments": 0,
+    "labels": [
+      "triaged",
+      "needs research",
+      "oncall: pt2",
+      "module: dynamic shapes",
+      "module: inductor",
+      "topic: fuzzer"
+    ],
+    "body_sha256": "f3321f76a3ff4088f21b306cbd8d34f6fb8e3d907d88bf98a584dab3d1706bd9"
+  },
+  "creation_window": {
+    "start": "2026-11-16T11:28:56Z",
+    "end": "2026-11-18T11:28:56Z"
+  },
+  "run_key": "a11c95d4-20261118T112856Z",
+  "assignment_key": "a11c95d4-20261118-205292",
+  "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+  "status": "Assigned",
+  "processed": false,
+  "assigned_at": "2026-11-18T11:40:59.882Z",
+  "updated_at": "2026-11-18T11:40:59.882Z",
+  "history_preflight": {
+    "complete": true,
+    "source": "results/history-preflight.json",
+    "summary": "results/history-summary.json",
+    "no_issue_specific_pr_found": true
+  },
+  "status_history": [
+    {
+      "status": "Assigned",
+      "timestamp": "2026-11-18T11:40:59.882Z",
+      "owner_worker_id": "7a556d7f-5800-4325-aefc-1e2b828a5cd0",
+      "note": "Authenticated issue/comments/timeline/PR and central-registry preflight complete."
+    }
+  ]
+}
