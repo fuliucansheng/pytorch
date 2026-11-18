@@ -11,16 +11,21 @@
   "issue_created_at": "2026-11-17T10:46:13Z",
   "issue_state": "open",
   "owner_github_login": "fuliucansheng",
-  "status": "Assigned",
+  "status": "Investigating",
   "processed": false,
   "assigned_at": "2026-11-18T11:42:13.406946+00:00",
-  "updated_at": "2026-11-18T11:42:13.406946+00:00",
+  "updated_at": "2026-11-18T11:42:53.103060+00:00",
   "history_checks_completed_at": "2026-11-18T11:38:16.587998+00:00",
   "status_history": [
     {
       "status": "Assigned",
       "at": "2026-11-18T11:42:13.406946+00:00",
       "note": "Authenticated history reviewed; atomic claim before reproduction."
+    },
+    {
+      "status": "Investigating",
+      "at": "2026-11-18T11:42:53.103060+00:00",
+      "note": "Durable claim verified; preparing isolated native Windows environment and pinned source reproduction."
     }
   ]
 }
