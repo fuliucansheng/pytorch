@@ -1,0 +1,74 @@
+{
+    "issue_number":  205275,
+    "source_url":  "https://github.com/pytorch/pytorch/issues/205275",
+    "source_title":  "`torch.div(..., rounding_mode=\"trunc\")` on integer tensors with a zero divisor terminates the process under `torch.compile` on CPU instead of raising the `RuntimeError` eager raises",
+    "source_created_at":  "2026-11-17T10:44:54Z",
+    "source_state_at_preflight":  "open",
+    "source_is_windows_related":  true,
+    "frozen_window":  {
+                          "start_utc":  "2026-11-16T11:28:56Z",
+                          "end_utc":  "2026-11-18T11:28:56Z"
+                      },
+    "run_key":  "a11c95d4-20261118T112856Z",
+    "assignment_key":  "a11c95d4-20261118-205275",
+    "owner_worker_id":  "a2dc0d9c-d09a-416d-9911-7f156dcce1f5",
+    "worker_registered_name":  null,
+    "worker_name_availability":  "Unavailable in provided registration/command-history metadata.",
+    "agent_profile_name":  "General Agent",
+    "hostname":  "DESKTOP-3O9Q5CE",
+    "status":  "Resolved Without Code Change",
+    "disposition":  "Skipped Existing PR",
+    "resolution_code":  "skipped_existing_pr",
+    "claim_created":  false,
+    "investigation_started":  false,
+    "processed":  false,
+    "reproduced":  null,
+    "reproduction_note":  "Not attempted: mandatory preflight skip, not an unsuccessful reproduction.",
+    "cause_confirmed":  false,
+    "cause_note":  "Missing zero-divisor guard is reported by the source issue; no independent runtime diagnosis was performed.",
+    "fixed":  false,
+    "validated":  false,
+    "new_pr_url":  null,
+    "existing_pr":  {
+                        "url":  "https://github.com/pytorch/pytorch/pull/178591",
+                        "state":  "open",
+                        "draft":  false,
+                        "merged":  false,
+                        "updated_at":  "2026-11-17T04:45:11Z",
+                        "head_sha":  "3333590d649d57533ec63f3957694e0a437b5f1b",
+                        "base_sha":  "a3b6ce4537fad3cf1d3a85b688d4bc615d0520e8",
+                        "overlap":  "Scalar/vector integer truncdiv uses guarded trunc_divide_integral; helper checks zero before division; compiled zero-divisor trunc tests are present."
+                    },
+    "tests":  {
+                  "passed":  0,
+                  "failed":  0,
+                  "executed":  0,
+                  "skipped_stages":  [
+                                         "dangerous child-process reproductions",
+                                         "before/after regressions",
+                                         "existing PyTorch unit/integration selections",
+                                         "native source build and lint"
+                                     ],
+                  "reason":  "All workload stages intentionally not run under duplicate-prevention SKIP."
+              },
+    "created_at":  "2026-11-18T11:52:20.5300741Z",
+    "updated_at":  "2026-11-18T11:52:20.5300741Z",
+    "status_history":  [
+                           {
+                               "status":  "Resolved Without Code Change",
+                               "disposition":  "Skipped Existing PR",
+                               "timestamp":  "2026-11-18T11:52:20.5300741Z",
+                               "reason":  "Confirmed overlapping open PR 178591 during authenticated preflight; no new investigation claim. Report publication pending."
+                           }
+                       ],
+    "documentation_status":  "Pending durable report publication.",
+    "report":  {
+                   "path":  "windows-triage/reports/205275.md",
+                   "sha256":  "525123fabd2f70787e8936b8d1bf31ccf7405b9001633a680ad34fb1981e5872",
+                   "immutable_url":  null,
+                   "commit_sha":  null
+               },
+    "retry_policy":  "Do not reassign, reproduce, implement, or open a new PR absent meaningful new information or an explicit resume request. Preserve this history.",
+    "ai_assisted":  true,
+    "human_review_claimed":  false
+}
