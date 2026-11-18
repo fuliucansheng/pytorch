@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "record_type": "owner_processing",
+  "issue": {
+    "repository": "pytorch/pytorch",
+    "number": 205293,
+    "url": "https://github.com/pytorch/pytorch/issues/205293",
+    "title": "[XPU][Windows] torch.where returns empty indices for a valid boolean mask on Intel Arc 140T",
+    "created_at": "2026-11-17T12:48:11Z",
+    "state_at_history_check": "open"
+  },
+  "run_key": "a11c95d4-20261118T112856Z",
+  "assignment_key": "a11c95d4-20261118-205293",
+  "owner_worker_id": "5372afcf-9ee3-4fc5-8e19-fd45d410a42e",
+  "owner_worker": "ProArt5090",
+  "execution_id": "b1df8b00-baa5-4931-b2b9-09c1c1ee656e",
+  "status": "Assigned",
+  "processed": false,
+  "assigned_at": "2026-11-18T11:51:15.541Z",
+  "updated_at": "2026-11-18T11:51:15.541Z",
+  "eligibility_window": {
+    "start": "2026-11-16T11:28:56Z",
+    "end": "2026-11-18T11:28:56Z",
+    "inclusive": true
+  },
+  "report_path": "windows-triage/reports/205293.md",
+  "report_url": null,
+  "pr_url": null,
+  "source": {
+    "assignment_sha256": "639c2e99196e1362c4de966ee5ff7781ac7a6a7b0cf1b9a7f11d2b223cd2b2b7",
+    "history_gate_sha256": "ce209c908918b6203f94d4dd075baeb3b2ea729849e72dfbbfca6439de1d9a90",
+    "history_checked_at": "2026-11-18T11:40:26.516Z",
+    "coordinator_manifest_sha256": "e2f3bff8cd3e29c54c5094d12e95e99acd5e0d7acb7ffb93de40c7d12e1babb3",
+    "policy_ref": "ddb7830ba472128f325eca4bc3b636720d0f6da8",
+    "registry_ref_before_claim": "ddb7830ba472128f325eca4bc3b636720d0f6da8"
+  },
+  "status_history": [
+    {
+      "status": "Assigned",
+      "at": "2026-11-18T11:51:15.541Z",
+      "reason": "Complete authenticated eligibility/history checks; exact requested owner; atomic create-only claim."
+    }
+  ],
+  "ai_disclosure": "AI-authored personal-fork processing documentation. No human review, reproduction, fix, or upstream acceptance is asserted."
+}
