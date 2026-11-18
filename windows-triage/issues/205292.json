@@ -28,7 +28,7 @@
   "status": "Blocked",
   "processed": false,
   "assigned_at": "2026-11-18T11:40:59.882Z",
-  "updated_at": "2026-11-18T17:41:52.747Z",
+  "updated_at": "2026-11-18T17:46:23.446Z",
   "history_preflight": {
     "complete": true,
     "source": "results/history-preflight.json",
@@ -76,8 +76,8 @@
   "pr": null,
   "report": {
     "url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205292.md",
-    "commit_sha": "f58f46ac13fde6464af3a711ac71bfe7695c0449",
-    "blob_sha": "11a9c9b906befca085585133172a1b675ce11833"
+    "commit_sha": "cc65d479c576b5800c36ee4c420eb48768f1a8b4",
+    "blob_sha": "3413fe195b862dafc6847e8f39cba51533b324d3"
   },
   "native_validation_blocker": {
     "attempt": "205292-run-folder-resume-1",
@@ -101,5 +101,11 @@
   "artifact_delivery": {
     "mechanism": "Exact local controller artifact allowlist and result_file",
     "cloud_upload_complete_claimed": false
-  }
+  },
+  "documentation_corrections": [
+    {
+      "timestamp": "2026-11-18T17:46:23.446Z",
+      "note": "Clarified pre-existing registry branch attribution and recorded bounded wheel metadata recovery; Blocked status, ownership and workload evidence unchanged."
+    }
+  ]
 }
