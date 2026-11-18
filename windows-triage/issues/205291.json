@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "record_type": "preexisting_processing",
+  "issue_number": 205291,
+  "issue_url": "https://github.com/pytorch/pytorch/issues/205291",
+  "processed": true,
+  "decision": "skip",
+  "recorded_by_run": "a11c95d4-20261118T112856Z",
+  "source_observed_at": "2026-11-18T11:38:22.113422Z",
+  "recorded_at": "2026-11-18T11:40:34.794216Z",
+  "new_fix_validated_in_this_run": false,
+  "source_url": "https://github.com/pytorch/pytorch/pull/205407",
+  "skip_reason": "Preexisting upstream draft fix PR explicitly references this issue and reports Windows investigation and tests. Skip without reinvestigation or independent validation.",
+  "source_evidence_key": "history/preexisting-pr-205407",
+  "source_state": {
+    "state": "open",
+    "draft": true,
+    "merged": false
+  }
+}
