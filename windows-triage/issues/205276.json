@@ -11,10 +11,10 @@
   "issue_created_at": "2026-11-17T10:46:13Z",
   "issue_state": "open",
   "owner_github_login": "fuliucansheng",
-  "status": "Investigating",
-  "processed": false,
+  "status": "Blocked",
+  "processed": true,
   "assigned_at": "2026-11-18T11:42:13.406946+00:00",
-  "updated_at": "2026-11-18T11:42:53.103060+00:00",
+  "updated_at": "2026-11-18T13:06:44.352314+00:00",
   "history_checks_completed_at": "2026-11-18T11:38:16.587998+00:00",
   "status_history": [
     {
@@ -26,6 +26,330 @@
       "status": "Investigating",
       "at": "2026-11-18T11:42:53.103060+00:00",
       "note": "Durable claim verified; preparing isolated native Windows environment and pinned source reproduction."
+    },
+    {
+      "status": "Blocked",
+      "at": "2026-11-18T13:06:44.352314+00:00",
+      "note": "Original matrix matches eager in all 15 cells; 55/56 new regressions pass, but default valid-Byte Inductor crashes (also on immutable baseline with explicit cast). Scalar/AVX2 controls are diagnostic only. No PR or code push; durable report verified before processed=true."
     }
-  ]
+  ],
+  "execution_details": {
+    "schema_version": 1,
+    "issue_number": 205276,
+    "issue_url": "https://github.com/pytorch/pytorch/issues/205276",
+    "outcome": "blocked",
+    "status": "Blocked",
+    "reproduced": true,
+    "candidate_implemented": true,
+    "candidate_fully_validated": false,
+    "pull_request_url": null,
+    "code_push_performed": false,
+    "owner_worker_id": "7697faa7-1081-48db-8d5b-515dd9df9c86",
+    "assignment_key": "a11c95d4-20261118-205276",
+    "authenticated_github_login": "fuliucansheng",
+    "history_review": {
+      "history_completed_at": "2026-11-18T12:54:02.081990+00:00",
+      "api_checks_complete": true,
+      "eligible_time_and_state": true,
+      "error_count": 0,
+      "full_relevant_object_equality": {
+        "issue_metadata": true,
+        "comments": true,
+        "timeline": true,
+        "personal_all_pulls": true,
+        "linked_pull_requests": true,
+        "pr_searches": true
+      },
+      "owner_assignment_run_match": {
+        "assignment_key": true,
+        "owner_worker_id": true,
+        "run_key": true
+      },
+      "registry_delta_review": "Own Investigating record and coordinator README reviewed; own report absent.",
+      "reviewed_content_not_just_collection": true,
+      "registry_readme_review_command_id": "88fb3f45909093ca94c489fcbbb4813a0860881c4ea7e8092fb52fda57834e13"
+    },
+    "tests": {
+      "original_matrix": {
+        "cells": 15,
+        "contract_matches": 15,
+        "mismatches": 0
+      },
+      "baseline_red": {
+        "run": 4,
+        "failures": 2,
+        "errors": 2,
+        "expected_baseline_failure": true
+      },
+      "new_regressions": {
+        "selected": 56,
+        "passed": 55,
+        "native_crash": 1,
+        "skipped": 0,
+        "unrun": 0,
+        "initial": {
+          "command": "results/regression_fixed.command.json",
+          "passed": "TestCrossEntropyTargetDtypeCPU.test_byte_negative_ignore_index_does_not_wrap_backend_aot_eager_cpu",
+          "native_crash": "TestCrossEntropyTargetDtypeCPU.test_byte_negative_ignore_index_does_not_wrap_backend_inductor_cpu"
+        },
+        "remaining": {
+          "passed": 54
+        }
+      },
+      "existing_decomp": {
+        "run": 4,
+        "passed": 4,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0
+      },
+      "existing_nn": {
+        "run": 10,
+        "passed": 9,
+        "skipped": 1,
+        "failures": 0,
+        "errors": 0,
+        "skip_test": "test_nll_loss_1d_input_backward_cpu",
+        "skip_reason": "onlyAccelerator: doesn't run on CPU or meta devices"
+      }
+    },
+    "controls": [
+      {
+        "dtype": "int64",
+        "explicit_cast": null,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "5ca01a30457ec5845b8f1c01f16af1e6eea0387097b0f127e5419286b7184bbc",
+        "phase": "complete",
+        "status": "passed",
+        "actual_output": 6.069260249312059,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": 0.0,
+        "codegen_configuration": null,
+        "name": "baseline_control_int64",
+        "exit_code": 0,
+        "result": "results/baseline_control_int64.json",
+        "command": "results/baseline_control_int64.command.json",
+        "stdout": "logs/baseline_control_int64.stdout.txt",
+        "stderr": "logs/baseline_control_int64.stderr.txt"
+      },
+      {
+        "dtype": "uint8",
+        "explicit_cast": null,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "5ca01a30457ec5845b8f1c01f16af1e6eea0387097b0f127e5419286b7184bbc",
+        "phase": "exception",
+        "status": "raised",
+        "actual_output": null,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": null,
+        "codegen_configuration": null,
+        "name": "baseline_control_uint8",
+        "exit_code": 1,
+        "result": "results/baseline_control_uint8.json",
+        "command": "results/baseline_control_uint8.command.json",
+        "stdout": "logs/baseline_control_uint8.stdout.txt",
+        "stderr": "logs/baseline_control_uint8.stderr.txt"
+      },
+      {
+        "dtype": "uint8",
+        "explicit_cast": true,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "5ca01a30457ec5845b8f1c01f16af1e6eea0387097b0f127e5419286b7184bbc",
+        "phase": "compiled_forward",
+        "status": "incomplete",
+        "actual_output": null,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": null,
+        "codegen_configuration": null,
+        "name": "baseline_control_uint8_explicit_cast",
+        "exit_code": 3221225477,
+        "result": "results/baseline_control_uint8_explicit_cast.json",
+        "command": "results/baseline_control_uint8_explicit_cast.command.json",
+        "stdout": "logs/baseline_control_uint8_explicit_cast.stdout.txt",
+        "stderr": "logs/baseline_control_uint8_explicit_cast.stderr.txt"
+      },
+      {
+        "dtype": "int64",
+        "explicit_cast": null,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+        "phase": "complete",
+        "status": "passed",
+        "actual_output": 6.069260249312059,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": 0.0,
+        "codegen_configuration": null,
+        "name": "candidate_control_int64",
+        "exit_code": 0,
+        "result": "results/candidate_control_int64.json",
+        "command": "results/candidate_control_int64.command.json",
+        "stdout": "logs/candidate_control_int64.stdout.txt",
+        "stderr": "logs/candidate_control_int64.stderr.txt"
+      },
+      {
+        "dtype": "uint8",
+        "explicit_cast": null,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+        "phase": "compiled_forward",
+        "status": "incomplete",
+        "actual_output": null,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": null,
+        "codegen_configuration": null,
+        "name": "candidate_control_uint8",
+        "exit_code": 3221225477,
+        "result": "results/candidate_control_uint8.json",
+        "command": "results/candidate_control_uint8.command.json",
+        "stdout": "logs/candidate_control_uint8.stdout.txt",
+        "stderr": "logs/candidate_control_uint8.stderr.txt"
+      },
+      {
+        "dtype": "uint8",
+        "explicit_cast": false,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+        "phase": "complete",
+        "status": "passed",
+        "actual_output": 6.069260249312058,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": 8.673617379884035e-18,
+        "codegen_configuration": {
+          "default_simdlen": null,
+          "requested_simdlen": 1,
+          "effective_simdlen": 1,
+          "chosen_isa_type": "InvalidVecISA",
+          "chosen_isa_bits": null,
+          "chosen_isa_arch_flags": "",
+          "aten_cpu_capability": "AVX512",
+          "ATEN_CPU_CAPABILITY_override": null,
+          "diagnostic_only": true
+        },
+        "name": "candidate_control_uint8_simd1",
+        "exit_code": 0,
+        "result": "results/candidate_control_uint8_simd1.json",
+        "command": "results/candidate_control_uint8_simd1.command.json",
+        "stdout": "logs/candidate_control_uint8_simd1.stdout.txt",
+        "stderr": "logs/candidate_control_uint8_simd1.stderr.txt"
+      },
+      {
+        "dtype": "uint8",
+        "explicit_cast": false,
+        "input_sha256": "a9fef6e5a66a1fcade19fe7849b4d3264184fb9515f5e8ebc0e4310230d79f03",
+        "source_sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+        "phase": "complete",
+        "status": "passed",
+        "actual_output": 6.069260249312059,
+        "expected_output": 6.069260249312058,
+        "maximum_gradient_error": 0.0,
+        "codegen_configuration": {
+          "default_simdlen": null,
+          "requested_simdlen": 256,
+          "effective_simdlen": 256,
+          "chosen_isa_type": "VecAVX2",
+          "chosen_isa_bits": 256,
+          "chosen_isa_arch_flags": "/arch:AVX2",
+          "aten_cpu_capability": "AVX512",
+          "ATEN_CPU_CAPABILITY_override": null,
+          "diagnostic_only": true
+        },
+        "name": "candidate_control_uint8_simd256",
+        "exit_code": 0,
+        "result": "results/candidate_control_uint8_simd256.json",
+        "command": "results/candidate_control_uint8_simd256.command.json",
+        "stdout": "logs/candidate_control_uint8_simd256.stdout.txt",
+        "stderr": "logs/candidate_control_uint8_simd256.stderr.txt"
+      }
+    ],
+    "source": {
+      "baseline_git_sha": "d4a0a1698bd77cac68294d8679be84a78b226c45",
+      "source_url": "https://github.com/pytorch/pytorch/tree/d4a0a1698bd77cac68294d8679be84a78b226c45",
+      "upstream_main_observed": "42d36d305cc6a9e16aa1812c0bab5cc7a5acd59f",
+      "personal_main_at_bootstrap": "421855c5b104109487b686c6a017dca0ddb5067d",
+      "worktree_status": " A test/inductor/test_cross_entropy_target_dtype.py\n M torch/_decomp/decompositions.py\n",
+      "sources": [
+        {
+          "checkout_path": "build/pytorch/torch/_decomp/decompositions.py",
+          "delivery_path": "outputs/pytorch/torch/_decomp/decompositions.py",
+          "sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+          "bytes": 225689
+        },
+        {
+          "checkout_path": "build/pytorch/test/inductor/test_cross_entropy_target_dtype.py",
+          "delivery_path": "outputs/pytorch/test/inductor/test_cross_entropy_target_dtype.py",
+          "sha256": "7597fb68a3edc8673df9ff817c5fad3f892e3f0e7b7a819888b048b9c54fba12",
+          "bytes": 4495
+        }
+      ],
+      "code_commit_created": false,
+      "code_branch_created": false,
+      "pull_request_created": false,
+      "patch": {
+        "path": "outputs/205276-candidate.patch",
+        "bytes": 6556,
+        "sha256": "01e042b08d686b9afb195be7b0119ca8a91219d6f149af83654b52575e9f54ae"
+      },
+      "wheel_baseline_sha256": "5ca01a30457ec5845b8f1c01f16af1e6eea0387097b0f127e5419286b7184bbc",
+      "checkout_baseline_sha256": "ef2b23142bef88a35cd17801036edabccd357a5b6f9e7ad1d1b0f86f8492ae9a",
+      "baseline_normalized_source_equality": "results/source_newline_identity.json",
+      "installed_overlay_sha256": "4d528d8796a39f503f1842293ee28519a2381b64acf4df57dc12fbab718df0f7",
+      "overlay_execution_evidence": "results/overlay_verification.json",
+      "full_source_build": false,
+      "native_components_modified": false,
+      "repository_policies": [
+        {
+          "path": "inputs/repository_policies/AGENTS.md",
+          "source_url": "https://github.com/pytorch/pytorch/blob/d4a0a1698bd77cac68294d8679be84a78b226c45/AGENTS.md",
+          "sha256": "6ebdb617a8104a7756d0cf36578ab01103dc9f07e4dc6feb751296b9c402faf7"
+        },
+        {
+          "path": "inputs/repository_policies/CLAUDE.md",
+          "source_url": "https://github.com/pytorch/pytorch/blob/d4a0a1698bd77cac68294d8679be84a78b226c45/CLAUDE.md",
+          "sha256": "d064295a2b6f914511fbc4e6887f1e807affd82a05a6357841c42106e20522ce"
+        },
+        {
+          "path": "inputs/repository_policies/AI_POLICY.md",
+          "source_url": "https://github.com/pytorch/pytorch/blob/d4a0a1698bd77cac68294d8679be84a78b226c45/AI_POLICY.md",
+          "sha256": "a07649d2cb144ead3e4eec5a6d15bd67dd3699f2bd6bae0bb9a62773923b1ce0"
+        }
+      ]
+    },
+    "environment": {
+      "platform": "native Windows x64",
+      "python": "3.12.10",
+      "torch": "2.16.0.dev20261117+cpu",
+      "msvc": "19.44.35230",
+      "toolset": "14.44.35207",
+      "sdk": "10.0.26100.0"
+    },
+    "technical_blocker": "Default-setting valid Byte target crashes compiled forward with 0xC0000005; legal immutable-baseline explicit-cast control also crashes.",
+    "attribution": "Pre-existing compiler/runtime path newly exposed by candidate; exact native instruction/root cause unresolved.",
+    "diagnostic_limit": "Scalar and AVX2 passes are diagnostic only, not a default validation pass.",
+    "policy_limit": "No exact-content human approval/commentary; no fully autonomous PR publication.",
+    "unrun": [
+      "full source build",
+      "repository-wide lint/type checking",
+      "full unit/integration/CI suite",
+      "GPU/CUDA",
+      "other Windows/compiler/Python versions",
+      "resolved default-setting Byte regression"
+    ],
+    "counts_assigned_scope_only": {
+      "assigned": 1,
+      "reproduced": 1,
+      "validated_fixes": 0,
+      "prs_created": 0,
+      "blocked": 1
+    },
+    "report": "reports/205276.md",
+    "publication_receipt": "results/registry_terminal.json",
+    "recommended_next_step": "Resume only with meaningful new compiler/codegen evidence or explicit authorization; resolve and validate default Byte forward/backward before human-reviewed publication."
+  },
+  "report": {
+    "path": "windows-triage/reports/205276.md",
+    "url": "https://github.com/fuliucansheng/pytorch/blob/msbeacon/windows-issue-registry/windows-triage/reports/205276.md",
+    "content_sha": "290433354c134fd5628bfa33515f82f6279c0096",
+    "sha256": "db0dd275127774cff57fe87117b926997d5810ead023218f71f012eda51cbe39",
+    "commit_sha": "93f30bcd59ac5e5ba0787dcc711c15357bdbbd87"
+  }
 }
