@@ -96,8 +96,9 @@ class VectorizedN {
   VectorizedN() = default;
 
   explicit VectorizedN(T val) {
+    const auto broadcast = Vectorized<T>(val);
     for (const auto i : c10::irange(N)) {
-      values[i] = Vectorized<T>(val);
+      values[i] = broadcast;
     }
   }
 

@@ -161,6 +161,71 @@ class LstmModule(torch.nn.Module):
 )
 @instantiate_parametrized_tests
 class CPUReproTests(TestCase):
+    @requires_vectorization
+    @parametrize("dtype", (torch.float32, torch.float64, torch.int64))
+    def test_vec_n_scalar_broadcast(self, dtype):
+        from torch._inductor.codecache import CppCodeCache
+        from torch._inductor.codegen.cpp import get_export_declaration
+
+        isa = cpu_vec_isa.pick_vec_isa()
+        if not isa:
+            self.skipTest("Default vector ISA is unavailable")
+        scalar_type = {
+            torch.float32: "float",
+            torch.float64: "double",
+            torch.int64: "int64_t",
+        }[dtype]
+        source = f"""
+#include <torch/csrc/inductor/cpp_prefix.h>
+
+template <int VectorCount>
+void broadcast(const {scalar_type}* values, {scalar_type}* output, int64_t rows) {{
+    using Vector = at::vec::VectorizedN<{scalar_type}, VectorCount>;
+    for (int64_t row = 0; row < rows; ++row) {{
+        Vector(values[row]).store(output + row * Vector::size());
+    }}
+}}
+
+extern "C" {get_export_declaration()} void kernel(
+    const {scalar_type}* values, {scalar_type}* output,
+    int64_t rows, int64_t vector_count) {{
+    switch (vector_count) {{
+        case 1: broadcast<1>(values, output, rows); break;
+        case 2: broadcast<2>(values, output, rows); break;
+        case 3: broadcast<3>(values, output, rows); break;
+        case 4: broadcast<4>(values, output, rows); break;
+    }}
+}}
+"""
+        library = CppCodeCache.load(source)
+        library.kernel.argtypes = (
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int64,
+            ctypes.c_int64,
+        )
+        library.kernel.restype = None
+        if dtype == torch.int64:
+            values = torch.tensor([0, 1, -1, -(2**63), 2**63 - 1], dtype=dtype)
+        else:
+            values = torch.tensor(
+                [0.0, -0.0, 1.25, -2.5, float("inf"), -float("inf"), float("nan")],
+                dtype=dtype,
+            )
+        lane_count = isa.bit_width() // (8 * values.element_size())
+        for vector_count in (1, 2, 3, 4):
+            with self.subTest(vector_count=vector_count):
+                actual = torch.empty(
+                    values.numel(), lane_count * vector_count, dtype=dtype
+                )
+                library.kernel(
+                    values.data_ptr(), actual.data_ptr(), values.numel(), vector_count
+                )
+                expected = values[:, None].expand_as(actual)
+                self.assertEqual(actual, expected)
+                if dtype != torch.int64:
+                    self.assertEqual(torch.signbit(actual), torch.signbit(expected))
+
     hw_classification = HardwareClassification.CPU
     common = check_model
 
