@@ -532,6 +532,10 @@ def _nll_loss_backward(
     ignore_index: int,
     total_weight: Tensor,
 ) -> Tensor:
+    torch._check(
+        target.dtype in (torch.int64, torch.uint8),
+        lambda: f"expected target dtype to be Long or Byte, but got {target.dtype}",
+    )
     channel_dim = 0 if self.dim() < 2 else 1
     if reduction == Reduction.MEAN.value:
         grad_output = grad_output / total_weight
@@ -630,6 +634,8 @@ def nll_loss_backward(
                 f"Expected a single element grad_output tensor, but got: {grad_output.shape}"
             )
 
+    if target.dtype == torch.uint8:
+        target = target.to(torch.int64)
     return _nll_loss_backward(
         grad_output, self, target, weight, reduction, ignore_index, total_weight
     )
@@ -4922,6 +4928,10 @@ def _nll_loss_forward(
     reduction: int,
     ignore_index: int,
 ) -> tuple[Tensor, Tensor]:
+    torch._check(
+        target.dtype in (torch.int64, torch.uint8),
+        lambda: f"expected target dtype to be Long or Byte, but got {target.dtype}",
+    )
     # self can be [N, C] or [C]
     # target can be [N] or []
 
@@ -5000,6 +5010,8 @@ def nll_loss_forward(
             f"but got weight tensor of shape: {weight.shape}"
         )
 
+    if target.dtype == torch.uint8:
+        target = target.to(torch.int64)
     return _nll_loss_forward(self, target, weight, reduction, ignore_index)
 
 
