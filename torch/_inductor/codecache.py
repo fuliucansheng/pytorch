@@ -84,6 +84,7 @@ from torch._inductor.codegen.rocm.compile_command import (
 )
 from torch._inductor.compile_worker.utils import in_toplevel_process
 from torch._inductor.cpp_builder import (
+    _is_windows_arm64,
     _LINKER_SCRIPT,
     _set_gpu_runtime_env,
     _TORCH_PATH,
@@ -274,6 +275,24 @@ def get_kernel_bin_format(device: str) -> str:
         return ""
 
 
+def _cuda_fatbinary(nvcc: str | None) -> str | None:
+    if _IS_WINDOWS and nvcc is not None and not os.path.dirname(nvcc):
+        resolved_nvcc = shutil.which(nvcc)
+        if (
+            resolved_nvcc is not None
+            and os.path.splitext(resolved_nvcc)[1].lower() == ".exe"
+        ):
+            nvcc = resolved_nvcc
+    fatbinary = shutil.which("fatbinary")
+    if nvcc is not None and (nvcc_dir := os.path.dirname(nvcc)):
+        candidate = os.path.join(
+            nvcc_dir, "fatbinary.exe" if _IS_WINDOWS else "fatbinary"
+        )
+        if os.path.isfile(candidate):
+            fatbinary = candidate
+    return fatbinary
+
+
 def _cuda_fatbin_command(
     asm_file: str,
     cubin_file: str,
@@ -308,7 +327,7 @@ def _cuda_fatbin_command(
         raise RuntimeError("nvcc is required to build fatbin")
 
     cmd = [
-        *shlex.split(nvcc),
+        *([nvcc] if _IS_WINDOWS else shlex.split(nvcc)),
         "-fatbin",
         asm_file,
         "-o",
@@ -3081,8 +3100,18 @@ ATTRIBUTE_NO_SANITIZE_ADDRESS\t\n"""
                     Windows: MSVC naturally rejects zero-sized arrays by default
                 """
                 if _IS_WINDOWS:
-                    # Windows ml64 is max support align to 16, but it is no effect to zero size data.
-                    asm_code = """
+                    if _is_windows_arm64():
+                        asm_code = f"""
+    AREA |.data|, DATA, READWRITE, ALIGN={align_bytes.bit_length() - 1}
+    EXPORT |?_binary_constants_bin_start@@3PAEA|
+    EXPORT |?_binary_constants_bin_end@@3PAEA|
+|?_binary_constants_bin_start@@3PAEA|
+|?_binary_constants_bin_end@@3PAEA|
+    END
+"""
+                    else:
+                        # Windows ml64 is max support align to 16, but it is no effect to zero size data.
+                        asm_code = """
 option casemap:none
 .data
 ?_binary_constants_bin_start@@3PAEA:
@@ -3550,9 +3579,38 @@ end
             cubins_o = []
             asm_files = []
             fatbin_cmds: list[tuple[str, str, str | None, str | None]] = []
-            if not _IS_WINDOWS:
+            if (
+                _IS_WINDOWS
+                and device_type == "cuda"
+                and torch.version.hip is None
+                and config.aot_inductor.embed_kernel_binary
+            ):
+                kernels = getattr(V.graph.wrapper_code, "_kernel_name_to_body", {})
+                cubins_to_embed = [
+                    (value[get_cpp_wrapper_cubin_path_name()], kernel_name)
+                    for kernel_name, value in CudaKernelParamCache.cache.items()
+                    if kernel_name in kernels
+                ]
+                if cubins_to_embed:
+                    if config.aot_inductor.emit_multi_arch_kernel:
+                        raise NotImplementedError(
+                            "Embedded multi-architecture CUDA kernels are not supported on Windows. "
+                            "Set aot_inductor.emit_multi_arch_kernel=False for single-architecture embedding."
+                        )
+                    cubins_o.append(
+                        batch_convert_cubins_to_obj(
+                            cubins_to_embed,
+                            os.path.dirname(output_so),
+                            cpp_compiler=get_cpp_compiler(),
+                        )
+                    )
+            if not _IS_WINDOWS or (
+                device_type == "cuda"
+                and torch.version.hip is None
+                and config.aot_inductor.emit_multi_arch_kernel
+                and not config.aot_inductor.embed_kernel_binary
+            ):
                 cubins_to_embed: list[tuple[str, str]] = []
-                ld, objcopy = get_ld_and_objcopy(use_relative_path)
                 kernels = getattr(V.graph.wrapper_code, "_kernel_name_to_body", {})
                 for kernel_name, value in CudaKernelParamCache.cache.items():
                     if kernel_name not in kernels:
@@ -3617,11 +3675,7 @@ end
                     from concurrent.futures import ThreadPoolExecutor
 
                     nvcc = cuda_compile_utils._cuda_compiler()
-                    fatbinary = shutil.which("fatbinary")
-                    if nvcc is not None and (nvcc_dir := os.path.dirname(nvcc)):
-                        candidate = os.path.join(nvcc_dir, "fatbinary")
-                        if os.path.exists(candidate):
-                            fatbinary = candidate
+                    fatbinary = _cuda_fatbinary(nvcc)
 
                     def _compile_fatbin(
                         asm_cubin_and_raw: tuple[str, str, str | None, str | None],
@@ -3648,6 +3702,7 @@ end
                         list(pool.map(_compile_fatbin, fatbin_cmds))
 
                 if cubins_to_embed:
+                    ld, objcopy = get_ld_and_objcopy(use_relative_path)
                     # Batch all cubins into a single .o using .incbin assembly.
                     # This replaces N * 3 subprocess calls (ld + 2x objcopy per
                     # cubin) with a single compiler invocation.
