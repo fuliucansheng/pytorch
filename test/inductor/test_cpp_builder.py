@@ -300,6 +300,56 @@ class TestCppTorchDeviceOptionsCompiler(TestCase):
 
 @instantiate_parametrized_tests
 class TestGetCppTorchDeviceOptionsWindows(TestCase):
+    @parametrize(
+        "platform",
+        [
+            subtest((True, None), name="windows"),
+            subtest((False, None), name="linux"),
+            subtest((False, "windows"), name="cross_windows"),
+        ],
+    )
+    @parametrize("device_type", ["cpu", "cpu:0", "cuda", "cuda:0"])
+    @parametrize("link_libtorch", [True, False])
+    @parametrize("aot_mode", [True, False])
+    def test_cuda_runtime_linking(self, platform, device_type, link_libtorch, aot_mode):
+        is_windows, cross_target_platform = platform
+        with (
+            mock.patch.object(cpp_builder, "_IS_WINDOWS", is_windows),
+            mock.patch.object(torch.version, "hip", None),
+            mock.patch.object(
+                cpp_builder.config.aot_inductor, "link_libtorch", link_libtorch
+            ),
+            mock.patch.object(
+                cpp_builder.config.aot_inductor,
+                "cross_target_platform",
+                cross_target_platform,
+            ),
+            mock.patch.dict(cpp_builder.config.__dict__, {"is_fbcode": lambda: False}),
+            mock.patch.object(cpp_builder, "_set_gpu_runtime_env"),
+            mock.patch("torch.utils.cpp_extension.include_paths", return_value=[]),
+            mock.patch("torch.utils.cpp_extension.library_paths", return_value=[]),
+            mock.patch.object(
+                cpp_builder, "_ensure_mingw_cudart_import_lib", return_value=["mingwex"]
+            ) as prepare_mingw,
+        ):
+            libraries = cpp_builder.get_cpp_torch_device_options(
+                device_type, aot_mode=aot_mode
+            )[5]
+
+        uses_cuda = device_type.split(":")[0] == "cuda"
+        targets_windows = is_windows or cross_target_platform == "windows"
+        self.assertEqual(libraries.count("cudart"), int(uses_cuda and targets_windows))
+        self.assertEqual(libraries.count("cuda"), int(uses_cuda))
+        self.assertEqual(
+            libraries.count("torch_cuda"), int(uses_cuda and link_libtorch)
+        )
+        if uses_cuda and cross_target_platform == "windows":
+            prepare_mingw.assert_called_once_with([])
+            self.assertIn("mingwex", libraries)
+        else:
+            prepare_mingw.assert_not_called()
+            self.assertNotIn("mingwex", libraries)
+
     @parametrize("device_type", ["cuda", "cuda:0"])
     def test_rocm_link_libtorch_links_amdhip64(self, device_type):
         with (
@@ -457,6 +507,43 @@ class TestCppBuilder(TestCase):
         # Linux only.
         self.assertNotIn("-a=1", other_platform_command)
         self.assertNotIn("-c=3", other_platform_command)
+
+    def test_batch_convert_cubins_to_obj_windows(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            cubin = os.path.join(directory, "shared.cubin")
+            data = bytes((0, 127, 128, 255))
+            with open(cubin, "wb") as binary:
+                binary.write(data)
+            object_path = os.path.join(directory, "cubins_combined.obj")
+            with (
+                mock.patch.object(cpp_builder, "_IS_WINDOWS", True),
+                mock.patch.object(cpp_builder, "CppBuilder") as builder,
+                mock.patch.object(cpp_builder, "CppOptions") as options,
+                mock.patch.object(cpp_builder.subprocess, "run") as subprocess_run,
+            ):
+                builder.return_value.get_target_file_path.return_value = object_path
+                result = cpp_builder.batch_convert_cubins_to_obj(
+                    [(cubin, "kernel_a"), (cubin, "kernel_b")], directory, "cl"
+                )
+            self.assertEqual(result, object_path)
+            options.assert_called_once_with(compiler="cl", compile_only=True)
+            builder.assert_called_once_with(
+                name="cubins_combined",
+                sources=os.path.join(directory, "cubins_combined.cpp"),
+                output_dir=directory,
+                BuildOption=options.return_value,
+            )
+            builder.return_value.build.assert_called_once_with()
+            subprocess_run.assert_not_called()
+            with open(os.path.join(directory, "cubins_combined.cpp")) as source:
+                code = source.read()
+            self.assertIn('extern "C" {', code)
+            for kernel in ("kernel_a", "kernel_b"):
+                self.assertIn(
+                    f"alignas(16) extern const unsigned char __{kernel}_start[] = {{",
+                    code,
+                )
+            self.assertEqual(code.count("0x00, 0x7f, 0x80, 0xff,"), 2)
 
     @unittest.skipUnless(
         IS_LINUX and all(shutil.which(t) for t in ("ld", "objcopy", "nm")),

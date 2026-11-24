@@ -12050,16 +12050,18 @@ class AOTInductorTestsTemplate:
         runner.run_with_lazy_cuda_graphs([x])
         runner.update_constant_buffer(new_weights(), False, False)
         (out,) = runner.run_with_lazy_cuda_graphs([x])
-        self.assertEqual(out, model(x))
+        expected = model(x)
+        self.assertEqual(out, expected)
         # Now a graph exists.
         msg = "captured CUDA graphs"
         with self.assertRaisesRegex(RuntimeError, msg):
             runner.update_constant_buffer(new_weights(), False, False)
-        with tempfile.NamedTemporaryFile() as blob:
-            blob.write(bytes(1 << 20))
-            blob.flush()
+        with tempfile.TemporaryDirectory() as directory:
+            blob_path = os.path.join(directory, "weights_blob")
+            with open(blob_path, "wb") as blob:
+                blob.write(bytes(1 << 20))
             with self.assertRaisesRegex(RuntimeError, msg):
-                runner.update_constant_buffer_from_blob(blob.name)
+                runner.update_constant_buffer_from_blob(blob_path)
         with self.assertRaisesRegex(RuntimeError, msg):
             runner.run_const_fold(False)
         # The inactive buffer can still be updated, but not swapped in.
@@ -12067,6 +12069,7 @@ class AOTInductorTestsTemplate:
         runner.update_constant_buffer(weights, True, False)
         with self.assertRaisesRegex(RuntimeError, msg):
             runner.swap_constant_buffer()
+        self.assertEqual(runner.run_with_lazy_cuda_graphs([x])[0], expected)
 
     @xfailIfROCm
     def test_aot_cudagraphs_run_on_several_instances(self):

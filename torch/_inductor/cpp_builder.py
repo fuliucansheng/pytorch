@@ -535,7 +535,10 @@ def batch_convert_cubins_to_obj(
     output_dir: str,
     cpp_compiler: str = "gcc",
 ) -> str:
-    """Convert multiple cubin files to a single .o using batched .incbin assembly.
+    """Convert multiple cubin files to a single object file.
+
+    On native Windows, compile aligned read-only C++ arrays into a COFF object
+    defining the start symbols consumed by the CUDA kernel loader.
 
     Instead of spawning 3 subprocesses per cubin (ld + 2x objcopy), generates
     a single .S file with .incbin directives for all cubins and compiles it
@@ -544,12 +547,38 @@ def batch_convert_cubins_to_obj(
 
     Args:
         cubins: list of (cubin_file_path, kernel_name) tuples.
-        output_dir: directory for the generated .S and .o files.
+        output_dir: directory for the generated source and object files.
         cpp_compiler: C compiler to use for assembling (default: gcc).
 
     Returns:
-        Path to the combined .o file.
+        Path to the combined object file.
     """
+    if _IS_WINDOWS:
+        cpp_path = os.path.join(output_dir, "cubins_combined.cpp")
+        with open(cpp_path, "w") as source:
+            source.write('extern "C" {\n')
+            for cubin_file, kernel_name in cubins:
+                with open(cubin_file, "rb") as binary:
+                    data = binary.read()
+                source.write(
+                    f"alignas(16) extern const unsigned char __{kernel_name}_start[] = {{\n"
+                )
+                for offset in range(0, len(data), 16):
+                    values = ", ".join(
+                        f"0x{value:02x}" for value in data[offset : offset + 16]
+                    )
+                    source.write(f"    {values},\n")
+                source.write("};\n")
+            source.write("}\n")
+        builder = CppBuilder(
+            name="cubins_combined",
+            sources=cpp_path,
+            output_dir=output_dir,
+            BuildOption=CppOptions(compiler=cpp_compiler, compile_only=True),
+        )
+        builder.build()
+        return builder.get_target_file_path()
+
     asm_path = os.path.join(output_dir, "cubins_combined.S")
     obj_path = os.path.join(output_dir, "cubins_combined.o")
 
@@ -2348,9 +2377,11 @@ def get_cpp_torch_device_options(
                 libraries += ["cuda"]
             else:
                 libraries += ["cuda", "torch_cuda"]
+            if _IS_WINDOWS or config.aot_inductor.cross_target_platform == "windows":
+                libraries += ["cudart"]
             if config.aot_inductor.cross_target_platform == "windows":
                 extra_libs = _ensure_mingw_cudart_import_lib(libraries_dirs)
-                libraries += ["cudart"] + extra_libs
+                libraries += extra_libs
             _transform_cuda_paths(libraries_dirs)
 
     if device_type == "xpu":
@@ -3149,10 +3180,14 @@ class CppBuilder:
             f.write(contents)
 
 
+def _is_windows_arm64() -> bool:
+    return _IS_WINDOWS and sysconfig.get_platform() == "win-arm64"
+
+
 def run_asm_build_object(src: str, target: str, cwd: str) -> None:
     def get_asm_compiler() -> str:
         if _IS_WINDOWS:
-            ASM_CC = "ml64"
+            ASM_CC = "armasm64" if _is_windows_arm64() else "ml64"
         else:
             ASM_CC = get_cpp_compiler()
             # Intel compiler is not support to compile asm, switch to gcc.
@@ -3162,6 +3197,8 @@ def run_asm_build_object(src: str, target: str, cwd: str) -> None:
 
     def get_command_line(asm_cc: str, src: str, target: str) -> str:
         if _IS_WINDOWS:
+            if _is_windows_arm64():
+                return shlex.join([asm_cc, "-o", target, src])
             # Format reference:
             # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
             cmd = f"{asm_cc} {src} /c /Fo {target}"  # codespell:ignore /Fo
