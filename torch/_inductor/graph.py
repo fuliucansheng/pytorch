@@ -2842,6 +2842,7 @@ class GraphLowering(torch.fx.Interpreter):
                         raise RuntimeError(
                             "When autotune_at_compile_time is False, AOTInductor generates "
                             "both JIT code and AOT code. The JIT code failed to run."
+                            "\n" + str(exc)
                         ) from exc
 
                 # Prepend config header with kernel compile results
