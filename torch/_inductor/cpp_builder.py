@@ -2348,9 +2348,11 @@ def get_cpp_torch_device_options(
                 libraries += ["cuda"]
             else:
                 libraries += ["cuda", "torch_cuda"]
+            if _IS_WINDOWS or config.aot_inductor.cross_target_platform == "windows":
+                libraries += ["cudart"]
             if config.aot_inductor.cross_target_platform == "windows":
                 extra_libs = _ensure_mingw_cudart_import_lib(libraries_dirs)
-                libraries += ["cudart"] + extra_libs
+                libraries += extra_libs
             _transform_cuda_paths(libraries_dirs)
 
     if device_type == "xpu":
