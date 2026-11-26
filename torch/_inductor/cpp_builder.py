@@ -2348,9 +2348,11 @@ def get_cpp_torch_device_options(
                 libraries += ["cuda"]
             else:
                 libraries += ["cuda", "torch_cuda"]
+            if _IS_WINDOWS or config.aot_inductor.cross_target_platform == "windows":
+                libraries += ["cudart"]
             if config.aot_inductor.cross_target_platform == "windows":
                 extra_libs = _ensure_mingw_cudart_import_lib(libraries_dirs)
-                libraries += ["cudart"] + extra_libs
+                libraries += extra_libs
             _transform_cuda_paths(libraries_dirs)
 
     if device_type == "xpu":
@@ -3149,10 +3151,37 @@ class CppBuilder:
             f.write(contents)
 
 
+def _is_windows_arm64() -> bool:
+    return _IS_WINDOWS and sysconfig.get_platform() == "win-arm64"
+
+
+def get_windows_zero_size_constants_asm() -> str:
+    if _is_windows_arm64():
+        return """
+        AREA |.data|, DATA, ALIGN=4
+        EXPORT |?_binary_constants_bin_start@@3PAEA|
+        EXPORT |?_binary_constants_bin_end@@3PAEA|
+|?_binary_constants_bin_start@@3PAEA|
+|?_binary_constants_bin_end@@3PAEA|
+        END
+"""
+    return """
+option casemap:none
+.data
+?_binary_constants_bin_start@@3PAEA:
+align 16
+?_binary_constants_bin_end@@3PAEA:
+align 16
+public ?_binary_constants_bin_start@@3PAEA
+public ?_binary_constants_bin_end@@3PAEA
+end
+"""
+
+
 def run_asm_build_object(src: str, target: str, cwd: str) -> None:
     def get_asm_compiler() -> str:
         if _IS_WINDOWS:
-            ASM_CC = "ml64"
+            ASM_CC = "armasm64" if _is_windows_arm64() else "ml64"
         else:
             ASM_CC = get_cpp_compiler()
             # Intel compiler is not support to compile asm, switch to gcc.
@@ -3161,7 +3190,9 @@ def run_asm_build_object(src: str, target: str, cwd: str) -> None:
         return ASM_CC
 
     def get_command_line(asm_cc: str, src: str, target: str) -> str:
-        if _IS_WINDOWS:
+        if _is_windows_arm64():
+            cmd = f"{asm_cc} -o {target} {src}"
+        elif _IS_WINDOWS:
             # Format reference:
             # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
             cmd = f"{asm_cc} {src} /c /Fo {target}"  # codespell:ignore /Fo

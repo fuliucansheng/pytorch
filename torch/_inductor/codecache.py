@@ -96,6 +96,7 @@ from torch._inductor.cpp_builder import (
     get_cpp_compiler,
     get_ld_and_objcopy,
     get_name_and_dir_from_output_file_path,
+    get_windows_zero_size_constants_asm,
     normalize_path_separator,
     run_asm_build_object,
 )
@@ -3081,18 +3082,7 @@ ATTRIBUTE_NO_SANITIZE_ADDRESS\t\n"""
                     Windows: MSVC naturally rejects zero-sized arrays by default
                 """
                 if _IS_WINDOWS:
-                    # Windows ml64 is max support align to 16, but it is no effect to zero size data.
-                    asm_code = """
-option casemap:none
-.data
-?_binary_constants_bin_start@@3PAEA:
-align 16
-?_binary_constants_bin_end@@3PAEA:
-align 16
-public ?_binary_constants_bin_start@@3PAEA
-public ?_binary_constants_bin_end@@3PAEA
-end
-"""
+                    asm_code = get_windows_zero_size_constants_asm()
                     asm_ext = "asm"
                 else:
                     asm_code = f"\t.section\t{section_attr}\n"
