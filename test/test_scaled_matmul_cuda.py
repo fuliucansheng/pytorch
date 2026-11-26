@@ -5,6 +5,7 @@ import json
 import math
 import re
 import itertools
+import sysconfig
 import tempfile
 import unittest
 
@@ -3794,6 +3795,87 @@ class TestFP8MatmulDevice(TestCase, _TestFP8MatmulMixin):
 class TestFP8MatmulCudaOnly(TestCase, _TestFP8MatmulMixin):
 
     hw_classification = HardwareClassification.CUDA
+
+    @skipIfRocm
+    @unittest.skipIf(not PLATFORM_SUPPORTS_FP8, f8_msg)
+    @unittest.skipIf(
+        IS_WINDOWS and (
+            not TEST_CUDA
+            or sysconfig.get_platform() != "win-arm64"
+            or _get_torch_cuda_version() < (13, 0)
+            or torch.cuda.get_device_capability() != (12, 1)
+            or set(torch.cuda.get_arch_list()) != {"sm_121a"}
+        ),
+        "requires native Windows ARM64 CUDA 13+ with an SM121a-only image",
+    )
+    @parametrize("api", ["v1", "v2"])
+    @parametrize("use_fast_accum", [False, True])
+    @parametrize("with_bias", [False, True])
+    def test_rowwise_scaling_broadcast_reference(self, device, api, use_fast_accum, with_bias):
+        rows, columns, reduction = 32, 48, 64
+        left = torch.randn(rows, reduction, device=device).to(torch.float8_e4m3fn)
+        right = torch.randn(columns, reduction, device=device).to(torch.float8_e4m3fn).t()
+        left_scale = torch.linspace(0.5, 1.5, rows, device=device).view(rows, 1)
+        right_scale = torch.linspace(0.25, 1.75, columns, device=device).view(1, columns)
+        bias = torch.linspace(-0.5, 0.5, columns, device=device, dtype=torch.bfloat16) if with_bias else None
+        reference = (left.cpu().double() * left_scale.cpu().double()) @ (
+            right.cpu().double() * right_scale.cpu().double()
+        )
+        if bias is not None:
+            reference = reference + bias.cpu().double()
+        if api == "v1":
+            actual = torch._scaled_mm(
+                left, right, left_scale, right_scale, bias=bias,
+                out_dtype=torch.bfloat16, use_fast_accum=use_fast_accum,
+            )
+        else:
+            actual = scaled_mm(
+                left, right, left_scale, ScalingType.RowWise,
+                right_scale, ScalingType.RowWise, bias=bias,
+                output_dtype=torch.bfloat16, use_fast_accum=use_fast_accum,
+            )
+        self.assertEqual(actual.dtype, torch.bfloat16)
+        self.assertEqual(actual.shape, (rows, columns))
+        self.assertEqual(actual.cpu(), reference.bfloat16(), rtol=1e-2, atol=0.05)
+
+    @skipIfRocm
+    @unittest.skipIf(not PLATFORM_SUPPORTS_FP8, f8_msg)
+    @parametrize("api", ["v1", "v2"])
+    @parametrize("operand", ["left", "right"])
+    @parametrize("invalid_scale", ["dtype", "shape", "stride"])
+    def test_rowwise_scaling_invalid_scale(self, device, api, operand, invalid_scale):
+        left = torch.ones(32, 64, device=device, dtype=torch.float8_e4m3fn)
+        right = torch.ones(48, 64, device=device, dtype=torch.float8_e4m3fn).t()
+        left_scale = torch.ones(32, 1, device=device)
+        right_scale = torch.ones(1, 48, device=device)
+        scale = left_scale if operand == "left" else right_scale
+        if invalid_scale == "dtype":
+            scale = scale.double()
+        elif invalid_scale == "shape":
+            scale = torch.empty_strided(scale.t().shape, (1, 1), device=device, dtype=scale.dtype).fill_(1)
+        elif operand == "left":
+            scale = torch.ones(32, 2, device=device)[:, :1]
+        else:
+            scale = torch.ones(1, 96, device=device)[:, ::2]
+        if operand == "left":
+            left_scale = scale
+        else:
+            right_scale = scale
+        message = "Invalid scaling configuration"
+        if api == "v2":
+            scale_name = "scale_a" if operand == "left" else "scale_b"
+            if invalid_scale == "dtype":
+                message = f"{scale_name} must have .*Float elements"
+            elif invalid_scale == "shape":
+                message = f"{scale_name} must have shape" if operand == "left" else r"scale_b\.size\(0\) == 1"
+            else:
+                dimension = 0 if operand == "left" else 1
+                message = rf"{scale_name}\.stride\({dimension}\).*1"
+        with self.assertRaisesRegex((RuntimeError, ValueError), message):
+            if api == "v1":
+                torch._scaled_mm(left, right, left_scale, right_scale, out_dtype=torch.bfloat16)
+            else:
+                scaled_mm(left, right, left_scale, ScalingType.RowWise, right_scale, ScalingType.RowWise)
 
     @skipIfRocm
     @parametrize("recipe", [ScalingType.TensorWise, ScalingType.RowWise])

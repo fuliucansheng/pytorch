@@ -1005,6 +1005,13 @@ elseif(USE_CUDA)
   torch_compile_options(torch_cuda)  # see cmake/public/utils.cmake
   target_compile_definitions(torch_cuda PRIVATE USE_CUDA)
 
+  if(MSVC AND MSVC_CXX_ARCHITECTURE_ID STREQUAL "ARM64"
+      AND CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
+    set_property(SOURCE ${TORCH_ROOT}/aten/src/ATen/native/cuda/RowwiseScaledMM.cu
+      APPEND PROPERTY COMPILE_OPTIONS
+        "-Xcompiler=/permissive" "-Xcompiler=/bigobj" "-Xcompiler=/Zc:__cplusplus")
+  endif()
+
   # native-AOT: embed the AOT-exported DSL kernels into torch_cuda. ONE include and no
   # logic here: tools/native_aot/gen_aot_lib.py decides everything and emits this file.
   # OPTIONAL, so a tree that embeds nothing does nothing.
