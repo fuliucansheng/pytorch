@@ -21,6 +21,11 @@ C10_DIAGNOSTIC_PUSH_AND_IGNORED_IF_DEFINED("-Wunused-but-set-variable")
 #define BUILD_GG_KERNEL
 #endif
 
+#if !defined(USE_ROCM) && defined(CUDA_VERSION) && CUDA_VERSION >= 12080
+#define BUILD_LEGACY_GG_KERNEL
+#include <ATen/native/cuda/GroupMMLegacy.cuh>
+#endif
+
 #if defined(BUILD_GG_KERNEL)
 
 #include <cute/tensor.hpp>
@@ -425,6 +430,12 @@ void bf16bf16_grouped_mm(
     std::optional<at::Tensor> offs,
     std::optional<at::Tensor> bias, // BF16
     at::Tensor& out) {
+#if defined(BUILD_LEGACY_GG_KERNEL)
+  if (at::cuda::getDeviceProperties(out.device().index())->major == 12) {
+    dispatch_bf16_grouped_kernel_sm80(mat_a, mat_b, offs, out);
+    return;
+  }
+#endif
 #if defined(BUILD_GG_KERNEL)
   dispatch_bf16_grouped_kernel_on_ab_transpose(mat_a, mat_b, offs, bias, out);
 #else

@@ -1157,7 +1157,20 @@ std::optional<c10::ScalarType> out_dtype) {
     mat_b.dtype() == at::kBFloat16 &&
     out_dtype.value_or(at::kBFloat16) == at::kBFloat16
   );
-  if (scaled_mm_arch_allowed(/*sm90_only=*/true, /*sm100_only=*/true) && a_b_and_out_are_bf16) {
+  bool cutlass_arch_allowed = scaled_mm_arch_allowed(/*sm90_only=*/true, /*sm100_only=*/true);
+#if defined(CUDA_VERSION) && CUDA_VERSION >= 12080
+  if (at::cuda::getCurrentDeviceProperties()->major == 12) {
+    const auto group_count = offs.has_value() ? offs->size(0) : mat_a.size(0);
+    const auto max_problem_size = std::numeric_limits<int32_t>::max();
+    const bool problem_sizes_fit =
+        mat_a.size(-2) <= max_problem_size &&
+        mat_a.size(-1) <= max_problem_size &&
+        mat_b.size(-2) <= max_problem_size &&
+        mat_b.size(-1) <= max_problem_size;
+    cutlass_arch_allowed = group_count < 1024 && problem_sizes_fit;
+  }
+#endif
+  if (cutlass_arch_allowed && a_b_and_out_are_bf16) {
     return GroupedMMKernel::Cutlass;
   }
 #elif defined(USE_ROCM_CK_GEMM)

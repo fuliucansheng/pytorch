@@ -12872,6 +12872,141 @@ _GROUPED_MM_CK_TILE_CONFIGS = {
 
 
 class TestGroupedMM(TestCase):
+    @onlyCUDA
+    @skipCUDAIfRocm
+    @dtypes(torch.bfloat16)
+    @parametrize("group_count", (1024, 1025))
+    def test_grouped_mm_sm12x_group_limit_fallback(self, device, dtype, group_count):
+        if torch.cuda.get_device_capability(device)[0] != 12:
+            self.skipTest("SM12x grouped CUTLASS regression")
+        mat_a = torch.randn(group_count, 8, 8, device=device, dtype=dtype)
+        mat_b = torch.randn(group_count, 8, 8, device=device, dtype=dtype)
+        expected = torch.bmm(mat_a.cpu().float(), mat_b.cpu().float()).to(dtype)
+        previous = torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm
+        try:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = False
+            self.assertFalse(torch._C._get_cublaslt_prefer_grouped_gemm())
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profile:
+                result = torch._grouped_mm(mat_a, mat_b)
+            torch.cuda.synchronize()
+        finally:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = previous
+        self.assertEqual(result.cpu(), expected, atol=0.01, rtol=0.016)
+        counts = {event.key: event.count for event in profile.key_averages()}
+        self.assertEqual(counts.get("aten::bmm", 0), 1)
+
+    @onlyCUDA
+    @parametrize("a_row_major", [False, True])
+    @parametrize("b_row_major", [False, True])
+    @dtypes(torch.bfloat16)
+    def test_grouped_mm_cutlass_sm12x(self, device, dtype, a_row_major, b_row_major):
+        if TEST_WITH_ROCM or torch.cuda.get_device_capability(device)[0] != 12:
+            self.skipTest("Requires a CUDA SM12x device")
+        mat_a = self._make_grouped_mm_matrix((64, 16), a_row_major, device, dtype, strided=True)
+        mat_b = self._make_grouped_mm_matrix((4, 16, 32), b_row_major, device, dtype, strided=True)
+        offsets = torch.tensor([8, 24, 40, 64], device=device, dtype=torch.int32)
+        cpu_a, cpu_b = mat_a.cpu().float(), mat_b.cpu().float()
+        boundaries = [0, 8, 24, 40, 64]
+        reference = torch.cat([
+            cpu_a[boundaries[group]:boundaries[group + 1]].mm(cpu_b[group])
+            for group in range(4)
+        ]).to(dtype)
+        previous = torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm
+        try:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = False
+            self.assertFalse(torch._C._get_cublaslt_prefer_grouped_gemm())
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profiler:
+                actual = torch._grouped_mm(mat_a, mat_b, offs=offsets)
+                torch.cuda.synchronize(device)
+            self.assertEqual(actual.cpu(), reference, atol=0.01, rtol=0.016)
+            counts = {event.key: event.count for event in profiler.key_averages()}
+            self.assertEqual(counts.get("aten::_grouped_mm", 0), 1)
+            self.assertEqual(counts.get("aten::mm", 0), 0)
+        finally:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = previous
+
+    @onlyCUDA
+    @parametrize("route", ["2d2d", "2d3d", "3d2d", "3d3d"])
+    @parametrize("a_row_major", [False, True])
+    @parametrize("b_row_major", [False, True])
+    @parametrize("zero_k", [False, True])
+    @dtypes(torch.bfloat16)
+    def test_grouped_mm_cutlass_sm12x_tails(
+        self, device, dtype, route, a_row_major, b_row_major, zero_k
+    ):
+        if TEST_WITH_ROCM or torch.cuda.get_device_capability(device)[0] != 12:
+            self.skipTest("Requires a CUDA SM12x device")
+        shapes = {
+            "2d2d": ((13, 25), (25, 11), [8, 16, 25]),
+            "2d3d": ((25, 19), (3, 19, 11), [8, 16, 25]),
+            "3d2d": ((3, 13, 19), (19, 25), [8, 16, 25]),
+            "3d3d": ((3, 13, 25), (3, 25, 11), None),
+        }
+        if zero_k:
+            shapes = {
+                "2d2d": ((13, 16), (16, 11), [0, 8, 8, 16]),
+                "2d3d": ((25, 0), (3, 0, 11), [8, 16, 25]),
+                "3d2d": ((3, 13, 0), (0, 25), [8, 16, 25]),
+                "3d3d": ((3, 13, 0), (3, 0, 11), None),
+            }
+        shape_a, shape_b, endpoints = shapes[route]
+
+        def poisoned_matrix(shape, row_major, poison, seed):
+            rows, columns = shape[-2:]
+            leading = max(8, math.ceil((columns if row_major else rows) / 8) * 8)
+            strides = (leading, 1) if row_major else (1, leading)
+            if len(shape) == 3:
+                batch_stride = max(8, (rows if row_major else columns) * leading)
+                strides = (batch_stride, *strides)
+            extent = 0 if math.prod(shape) == 0 else sum(
+                (size - 1) * stride for size, stride in zip(shape, strides)
+            ) + 1
+            storage = torch.full((extent + 128,), poison, device=device, dtype=dtype)
+            matrix = storage.as_strided(shape, strides, 64)
+            generator = torch.Generator().manual_seed(seed)
+            logical = torch.randint(-2, 3, shape, generator=generator).float().div_(4).to(dtype)
+            matrix.copy_(logical)
+            return matrix, logical.float()
+
+        mat_a, cpu_a = poisoned_matrix(shape_a, a_row_major, 2.0, 123)
+        mat_b, cpu_b = poisoned_matrix(shape_b, b_row_major, 3.0, 456)
+        offsets = None if endpoints is None else torch.tensor(
+            endpoints, device=device, dtype=torch.int32
+        )
+        if endpoints is None:
+            reference = torch.stack([cpu_a[group].mm(cpu_b[group]) for group in range(3)])
+        else:
+            boundaries = list(zip([0, *endpoints[:-1]], endpoints))
+            if route == "2d2d":
+                reference = torch.stack([
+                    cpu_a[:, start:end].mm(cpu_b[start:end]) for start, end in boundaries
+                ])
+            elif route == "2d3d":
+                reference = torch.cat([
+                    cpu_a[start:end].mm(cpu_b[group])
+                    for group, (start, end) in enumerate(boundaries)
+                ])
+            else:
+                reference = torch.cat([
+                    cpu_a[group].mm(cpu_b[:, start:end])
+                    for group, (start, end) in enumerate(boundaries)
+                ], dim=1)
+        reference = reference.to(dtype)
+        previous = torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm
+        try:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = False
+            self.assertFalse(torch._C._get_cublaslt_prefer_grouped_gemm())
+            with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profiler:
+                actual = torch._grouped_mm(mat_a, mat_b, offs=offsets)
+                torch.cuda.synchronize(device)
+            self.assertEqual(actual.cpu(), reference, atol=0.01, rtol=0.01)
+            counts = {event.key: event.count for event in profiler.key_averages()}
+            self.assertEqual(counts.get("aten::_grouped_mm", 0), 1)
+            self.assertEqual(counts.get("aten::mm", 0), 0)
+            self.assertEqual(counts.get("aten::bmm", 0), 0)
+        finally:
+            torch.backends.cuda.matmul.prefer_cublaslt_grouped_gemm = previous
+
     @preserves_device_selection
     def setUp(self):
         super().setUp()
