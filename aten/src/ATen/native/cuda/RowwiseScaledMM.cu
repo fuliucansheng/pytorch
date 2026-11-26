@@ -4,11 +4,11 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <ATen/cuda/nvrtc_stub/ATenNVRTC.h>
 #include <c10/macros/Macros.h>
+#include <cstring>
 
-// Determine if the architecture supports rowwise scaled mm
-// Currently failing on windows with:
-// https://github.com/NVIDIA/cutlass/issues/1571
-#if !defined(USE_ROCM) && !defined(_WIN32) && defined(CUDA_VERSION)
+#if !defined(USE_ROCM) && defined(CUDA_VERSION) && \
+    (!defined(_WIN32) || \
+     (defined(_M_ARM64) && !defined(_M_ARM64EC) && CUDA_VERSION >= 13000))
 
 #define BUILD_ROWWISE_FP8_KERNEL
 #endif
@@ -40,6 +40,113 @@
 #include <ATen/native/cuda/cutlass_common.cuh>
 
 namespace {
+
+#if defined(_WIN32)
+constexpr size_t kWindowsRowwiseImageTagBytes = 1024;
+
+template <typename Kernel>
+struct WindowsRowwiseParamsBytes {
+  unsigned char storage[sizeof(typename Kernel::Params)];
+};
+
+template <typename Kernel>
+__global__ void windows_rowwise_copy_params(
+    CUTLASS_GRID_CONSTANT WindowsRowwiseParamsBytes<Kernel> const bytes,
+    typename Kernel::Params* destination) {
+  auto* output = reinterpret_cast<unsigned char*>(destination);
+  for (size_t index = threadIdx.x; index < sizeof(bytes); index += blockDim.x) {
+    output[index] = bytes.storage[index];
+  }
+#if defined(__CUDA_ARCH_FEAT_SM121_ALL)
+  __threadfence();
+  cute::tma_descriptor_fence_release();
+#endif
+}
+
+template <typename Kernel>
+__global__ __launch_bounds__(
+    Kernel::MaxThreadsPerBlock, Kernel::MinBlocksPerMultiprocessor)
+void windows_rowwise_kernel(typename Kernel::Params const* params) {
+#if defined(__CUDA_ARCH_FEAT_SM121_ALL)
+  __shared__ volatile unsigned char image_tag[kWindowsRowwiseImageTagBytes];
+  if (threadIdx.x < kWindowsRowwiseImageTagBytes) {
+    image_tag[threadIdx.x] = 1;
+  }
+  cute::tma_descriptor_fence_acquire(
+      params->mainloop.tma_load_a.get_tma_descriptor());
+  cute::tma_descriptor_fence_acquire(
+      params->mainloop.tma_load_b.get_tma_descriptor());
+  cute::tma_descriptor_fence_acquire(
+      params->epilogue.tma_store_d.get_tma_descriptor());
+  extern __shared__ __align__(1024) char shared_storage[];
+  Kernel kernel;
+  kernel(*params, shared_storage);
+#endif
+}
+
+template <typename Kernel>
+void launch_windows_rowwise(
+    typename Kernel::Arguments& arguments,
+    const at::Tensor& input,
+    int swizzle) {
+  static_assert(alignof(cute::TmaDescriptor) >= 64);
+  static_assert(sizeof(WindowsRowwiseParamsBytes<Kernel>) <= 4096);
+  TORCH_CHECK(
+      cute::size(typename Kernel::ClusterShape{}) == 1,
+      "Rowwise scaling is not currently supported on your device");
+  cudaFuncAttributes attributes{};
+  C10_CUDA_CHECK(cudaFuncGetAttributes(&attributes, windows_rowwise_kernel<Kernel>));
+  TORCH_CHECK(
+      attributes.sharedSizeBytes == kWindowsRowwiseImageTagBytes,
+      "Rowwise scaling is not currently supported on your device");
+  const auto device = input.get_device();
+  const auto* properties = at::cuda::getDeviceProperties(device);
+  constexpr int shared_bytes = Kernel::SharedStorageSize;
+  const size_t total_shared_bytes =
+      static_cast<size_t>(shared_bytes) + attributes.sharedSizeBytes;
+  TORCH_CHECK(
+      total_shared_bytes <= properties->sharedMemPerBlockOptin,
+      "Rowwise scaling is not currently supported on your device");
+  if (total_shared_bytes > properties->sharedMemPerBlock ||
+      shared_bytes > attributes.maxDynamicSharedSizeBytes) {
+    C10_CUDA_CHECK(cudaFuncSetAttribute(
+        windows_rowwise_kernel<Kernel>,
+        cudaFuncAttributeMaxDynamicSharedMemorySize,
+        shared_bytes));
+  }
+  arguments.hw_info.device_id = device;
+  arguments.hw_info.sm_count =
+      properties->multiProcessorCount -
+      at::globalContext()._SMCarveout_EXPERIMENTAL().value_or(0);
+  arguments.scheduler.max_swizzle_size = swizzle;
+  TORCH_CHECK(Kernel::can_implement(arguments), "cutlass cannot implement");
+  const size_t workspace_size = Kernel::get_workspace_size(arguments);
+  const size_t params_offset = (workspace_size + 127) / 128 * 128;
+  auto workspace = input.new_empty(
+      {static_cast<int64_t>(params_offset + sizeof(typename Kernel::Params))},
+      at::TensorOptions().dtype(at::kByte));
+  auto* workspace_ptr = workspace.mutable_data_ptr();
+  auto* device_params = reinterpret_cast<typename Kernel::Params*>(
+      static_cast<unsigned char*>(workspace_ptr) + params_offset);
+  TORCH_CHECK(
+      reinterpret_cast<uintptr_t>(device_params) % 128 == 0,
+      "Rowwise CUTLASS parameters require aligned device storage");
+  const cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  const auto status = Kernel::initialize_workspace(arguments, workspace_ptr, stream);
+  TORCH_CHECK(status == cutlass::Status::kSuccess, "cutlass cannot initialize");
+  const auto params = Kernel::to_underlying_arguments(arguments, workspace_ptr);
+  WindowsRowwiseParamsBytes<Kernel> bytes{};
+  std::memcpy(bytes.storage, &params, sizeof(params));
+  windows_rowwise_copy_params<Kernel><<<1, 128, 0, stream>>>(bytes, device_params);
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  windows_rowwise_kernel<Kernel><<<
+      Kernel::get_grid_shape(params),
+      Kernel::get_block_shape(),
+      shared_bytes,
+      stream>>>(device_params);
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+}
+#endif
 
 using DtypeScale = float;
 using DtypeAccum = float;
@@ -256,6 +363,9 @@ void f8f8bf16_rowwise_impl(
        reinterpret_cast<DtypeOutput*>(out.mutable_data_ptr()),
        stride_output}};
 
+#if defined(_WIN32)
+  launch_windows_rowwise<GemmKernel>(arguments, XQ, swizzle);
+#else
   Gemm gemm;
 
   // Using the arguments, query for extra workspace required for matrix
@@ -291,6 +401,7 @@ void f8f8bf16_rowwise_impl(
       "cutlass cannot run",
       cutlass::cutlassGetStatusString(status));
   C10_CUDA_KERNEL_LAUNCH_CHECK();
+#endif
 }
 
 
@@ -450,6 +561,9 @@ void f8f8bf16_rowwise_impl_sm100_sm120(
        reinterpret_cast<DtypeOutput*>(out.mutable_data_ptr()),
        stride_output}};
 
+#if defined(_WIN32)
+  launch_windows_rowwise<GemmKernel>(arguments, XQ, swizzle);
+#else
   Gemm gemm;
 
   // Using the arguments, query for extra workspace required for matrix
@@ -485,6 +599,7 @@ void f8f8bf16_rowwise_impl_sm100_sm120(
       "cutlass cannot run",
       cutlass::cutlassGetStatusString(status));
   C10_CUDA_KERNEL_LAUNCH_CHECK();
+#endif
 }
 
 // Cutlass rowwise kernel for SM89
@@ -942,6 +1057,11 @@ void dispatch_fp8_rowwise_kernel_on_sm(
     std::optional<at::Tensor> bias,
     at::Tensor out) {
   cudaDeviceProp* properties = at::cuda::getCurrentDeviceProperties();
+#if defined(_WIN32)
+  TORCH_CHECK(
+      properties != nullptr && properties->major == 12 && properties->minor == 1,
+      "Rowwise scaling is not currently supported on your device");
+#endif
   const bool sm89 = properties != nullptr && properties->major == 8 && properties->minor == 9;
   const bool sm9x = properties != nullptr && properties->major == 9;
   const bool sm10x = properties != nullptr && properties->major == 10;
